@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"social-media-app/internal/store"
 	"time"
 
 	"charm.land/log/v2"
@@ -11,10 +12,19 @@ import (
 
 type application struct {
 	config config
+	store  store.Storage
 }
 
 type config struct {
 	addr string
+	db   dbConfig
+}
+
+type dbConfig struct {
+	addr         string
+	maxOpenConns int
+	maxIdleConns int
+	maxIdleTime  string
 }
 
 func (app *application) mount() http.Handler {
@@ -32,7 +42,7 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Route("/v1", func(r chi.Router) {
-		r.Get("/health", healthCheckHandler)
+		r.Get("/health", app.healthCheckHandler)
 	})
 
 	return r
