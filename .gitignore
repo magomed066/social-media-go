@@ -1,0 +1,13 @@
+# Local environment files (may contain secrets)
+.env
+.env.*
+!.env.example
+envrc
+
+# Compiled app and Air build output
+/bin/
+/tmp/
+build-errors.log
+
+# macOS metadata
+.DS_Store
