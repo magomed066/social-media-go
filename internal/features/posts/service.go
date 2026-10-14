@@ -31,3 +31,12 @@ func (s *service) Create(ctx context.Context, payload postsDTO.CreatePostPayload
 
 	return post, nil
 }
+
+func (s *service) GetByID(ctx context.Context, id int64) (*Post, error) {
+	post, err := s.repository.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return post, nil
+}

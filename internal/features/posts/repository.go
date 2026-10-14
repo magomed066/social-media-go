@@ -3,6 +3,8 @@ package posts
 import (
 	"context"
 	"database/sql"
+	"errors"
+	mainErrors "social-media-app/internal/errors/main"
 
 	"github.com/lib/pq"
 )
@@ -40,4 +42,33 @@ func (r *repository) Create(ctx context.Context, post *Post) error {
 	}
 
 	return nil
+}
+
+func (r *repository) GetByID(ctx context.Context, id int64) (*Post, error) {
+	query := `
+		SELECT id, user_id, title, content, created_at, tags, updated_at
+		FROM posts
+		WHERE id = $1
+	`
+
+	var post Post
+
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&post.ID,
+		&post.UserID,
+		&post.Title,
+		&post.Content,
+		&post.CreatedAt,
+		pq.Array(&post.Tags),
+		&post.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, mainErrors.ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	return &post, nil
 }
