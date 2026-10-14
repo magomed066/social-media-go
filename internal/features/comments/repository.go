@@ -3,6 +3,7 @@ package comments
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 type repository struct {
@@ -23,6 +24,9 @@ func (r *repository) GetByPostID(ctx context.Context, postID int64) ([]Comment, 
 		WHERE c.post_id = $1
 		ORDER BY c.created_at DESC
 	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
 
 	rows, err := r.db.QueryContext(ctx, query, postID)
 	if err != nil {

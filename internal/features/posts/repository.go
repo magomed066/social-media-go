@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"social-media-app/internal/consts"
 	mainErrors "social-media-app/internal/errors/main"
 
 	"github.com/lib/pq"
@@ -24,6 +25,9 @@ func (r *repository) Create(ctx context.Context, post *Post) error {
 		INSERT INTO posts (content, title, user_id, tags)
 		VALUES ($1, $2, $3, $4) RETURNING id, created_at, updated_at
 	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
 
 	err := r.db.QueryRowContext(
 		ctx,
@@ -51,6 +55,9 @@ func (r *repository) GetByID(ctx context.Context, id int64) (*Post, error) {
 		WHERE id = $1
 	`
 
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
+
 	var post Post
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
@@ -76,6 +83,9 @@ func (r *repository) GetByID(ctx context.Context, id int64) (*Post, error) {
 
 func (r *repository) Delete(ctx context.Context, postID int64) error {
 	query := "DELETE FROM posts WHERE id = $1"
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
 
 	res, err := r.db.ExecContext(ctx, query, postID)
 	if err != nil {
@@ -103,6 +113,9 @@ func (r *repository) Update(ctx context.Context, post *Post) error {
 		    version = version + 1
 		WHERE id = $3 AND version = $4
 	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
 
 	res, err := r.db.ExecContext(ctx, query, post.Title, post.Content, post.ID, post.Version)
 	if err != nil {

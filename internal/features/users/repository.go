@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"database/sql"
+	"social-media-app/internal/consts"
 )
 
 type repository struct {
@@ -14,6 +15,10 @@ func (s *repository) Create(ctx context.Context, user *User) error {
 		INSERT INTO users (first_name, last_name, password, email)
 		VALUES ($1, $2, $3) RETURNING id, created_at
 	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
+
 	err := s.db.QueryRowContext(
 		ctx,
 		query,
