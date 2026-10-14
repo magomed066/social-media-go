@@ -83,7 +83,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedPost, err := h.service.Update(r.Context(), post.ID, payload)
+	if payload.Title != nil {
+		post.Title = *payload.Title
+	}
+	if payload.Content != nil {
+		post.Content = *payload.Content
+	}
+
+	err := h.service.Update(r.Context(), post)
 	if err != nil {
 		if errors.Is(err, mainErrors.ErrNotFound) {
 			mainErrors.NotFoundResponse(w, r, err)
@@ -94,7 +101,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.WriteJSON(w, http.StatusOK, updatedPost)
+	json.WriteJSON(w, http.StatusOK, post)
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {

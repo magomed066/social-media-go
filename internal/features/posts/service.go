@@ -50,6 +50,6 @@ func (s *service) Delete(ctx context.Context, id int64) error {
 	return s.repository.Delete(ctx, id)
 }
 
-func (s *service) Update(ctx context.Context, postID int64, payload postsDTO.UpdatePostPayload) (Post, error) {
-	return s.repository.Update(ctx, postID, payload)
+func (s *service) Update(ctx context.Context, post *Post) error {
+	return s.repository.Update(ctx, post)
 }

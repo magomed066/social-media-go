@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	postsDTO "social-media-app/internal/dto/posts"
 	mainErrors "social-media-app/internal/errors/main"
 
 	"github.com/lib/pq"
@@ -47,7 +46,7 @@ func (r *repository) Create(ctx context.Context, post *Post) error {
 
 func (r *repository) GetByID(ctx context.Context, id int64) (*Post, error) {
 	query := `
-		SELECT id, user_id, title, content, created_at, tags, updated_at
+		SELECT id, user_id, title, content, created_at, tags, updated_at, version
 		FROM posts
 		WHERE id = $1
 	`
@@ -62,6 +61,7 @@ func (r *repository) GetByID(ctx context.Context, id int64) (*Post, error) {
 		&post.CreatedAt,
 		pq.Array(&post.Tags),
 		&post.UpdatedAt,
+		&post.Version,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -94,38 +94,30 @@ func (r *repository) Delete(ctx context.Context, postID int64) error {
 	return nil
 }
 
-func (r *repository) Update(ctx context.Context, postID int64, data postsDTO.UpdatePostPayload) (Post, error) {
+func (r *repository) Update(ctx context.Context, post *Post) error {
 	query := `
 		UPDATE posts
-		SET title = COALESCE($1, title),
-		    content = COALESCE($2, content),
-		    updated_at = NOW()
-		WHERE id = $3
-		RETURNING id, user_id, title, content, created_at, tags, updated_at
+		SET title = $1,
+		    content = $2,
+		    updated_at = NOW(),
+		    version = version + 1
+		WHERE id = $3 AND version = $4
 	`
 
-	var post Post
-
-	err := r.db.QueryRowContext(ctx, query, data.Title, data.Content, postID).Scan(
-		&post.ID,
-		&post.UserID,
-		&post.Title,
-		&post.Content,
-		&post.CreatedAt,
-		pq.Array(&post.Tags),
-		&post.UpdatedAt,
-	)
+	res, err := r.db.ExecContext(ctx, query, post.Title, post.Content, post.ID, post.Version)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return Post{}, mainErrors.ErrNotFound
-		}
-
-		return Post{}, err
+		return err
 	}
 
-	return post, nil
-}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return mainErrors.ErrNotFound
+	}
 
-func postsContextMiddleware() {
+	post.Version++
 
+	return nil
 }
