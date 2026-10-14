@@ -3,6 +3,8 @@ package json
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type envelope struct {
@@ -10,6 +12,8 @@ type envelope struct {
 	Data    any    `json:"data"`
 	Error   string `json:"error"`
 }
+
+var Validate = validator.New(validator.WithRequiredStructEnabled())
 
 func WriteJSON(w http.ResponseWriter, status int, data any) error {
 	setHeaderConfig(w, status)

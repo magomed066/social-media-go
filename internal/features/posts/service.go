@@ -3,7 +3,12 @@ package posts
 import (
 	"context"
 	postsDTO "social-media-app/internal/dto/posts"
+	"social-media-app/internal/features/comments"
 )
+
+type CommentsService interface {
+	GetByPostID(ctx context.Context, postID int64) ([]comments.Comment, error)
+}
 
 type service struct {
 	repository repository
@@ -39,4 +44,12 @@ func (s *service) GetByID(ctx context.Context, id int64) (*Post, error) {
 	}
 
 	return post, nil
+}
+
+func (s *service) Delete(ctx context.Context, id int64) error {
+	return s.repository.Delete(ctx, id)
+}
+
+func (s *service) Update(ctx context.Context, postID int64, payload postsDTO.UpdatePostPayload) (Post, error) {
+	return s.repository.Update(ctx, postID, payload)
 }
