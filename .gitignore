@@ -11,3 +11,5 @@ build-errors.log
 
 # macOS metadata
 .DS_Store
+
+*.http
