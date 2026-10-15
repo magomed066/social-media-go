@@ -143,12 +143,28 @@ func (r *repository) GetUserFeed(ctx context.Context, userID int64, pagination p
 		FROM posts p
 		LEFT JOIN comments c ON c.post_id = p.id
 		LEFT JOIN users u ON p.user_id = u.id
-		WHERE p.user_id = $1
-   		OR EXISTS (
-       		SELECT 1
-       		FROM followers f
-       		WHERE f.follower_id = p.user_id
-         	AND f.user_id = $1
+		WHERE ( 
+			p.user_id = $1
+			OR EXISTS (
+				SELECT 1
+				FROM followers f
+				WHERE f.follower_id = p.user_id
+				AND f.user_id = $1
+			)
+		)
+		AND (
+    		p.title ILIKE '%' || $4 || '%'
+    		OR p.content ILIKE '%' || $4 || '%'
+		)
+		AND (
+			COALESCE(cardinality($5::text[]), 0) = 0
+   		 	OR p.tags @> $5::text[]
+		)
+		AND (
+			$6::timestamptz IS NULL OR p.created_at >= $6::timestamptz
+		)
+		AND (
+			$7::timestamptz IS NULL OR p.created_at < $7::timestamptz
 		)
 		GROUP BY p.id, u.username, u.id
 		ORDER BY p.created_at ` + pagination.Sort + `
@@ -165,6 +181,10 @@ func (r *repository) GetUserFeed(ctx context.Context, userID int64, pagination p
 		userID,
 		pagination.Limit,
 		pagination.Offset,
+		pagination.Search,
+		pq.Array(pagination.Tags),
+		pagination.From,
+		pagination.To,
 	)
 	if err != nil {
 		return []PostWithMetaData{}, err
