@@ -3,7 +3,7 @@ package comments
 import (
 	"context"
 	"database/sql"
-	"social-media-app/internal/consts"
+	"social-media-app/internal/shared/consts"
 	"time"
 )
 

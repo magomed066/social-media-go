@@ -2,9 +2,9 @@ package users
 
 import (
 	"net/http"
-	usersDTO "social-media-app/internal/dto/users"
-	mainErrors "social-media-app/internal/errors/main"
 	"social-media-app/internal/json"
+	usersDTO "social-media-app/internal/shared/dto/users"
+	mainErrors "social-media-app/internal/shared/errors/main"
 )
 
 type Handler struct {

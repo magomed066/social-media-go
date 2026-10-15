@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"social-media-app/internal/consts"
-	mainErrors "social-media-app/internal/errors/main"
+	"social-media-app/internal/shared/consts"
+	mainErrors "social-media-app/internal/shared/errors/main"
 
 	"github.com/lib/pq"
 )

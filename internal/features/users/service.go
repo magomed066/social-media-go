@@ -2,7 +2,7 @@ package users
 
 import (
 	"context"
-	usersDTO "social-media-app/internal/dto/users"
+	usersDTO "social-media-app/internal/shared/dto/users"
 )
 
 type service struct {

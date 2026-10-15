@@ -2,8 +2,8 @@ package posts
 
 import (
 	"context"
-	postsDTO "social-media-app/internal/dto/posts"
 	"social-media-app/internal/features/comments"
+	postsDTO "social-media-app/internal/shared/dto/posts"
 )
 
 type CommentsService interface {

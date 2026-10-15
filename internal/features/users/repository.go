@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"social-media-app/internal/consts"
-	usersDTO "social-media-app/internal/dto/users"
-	mainErrors "social-media-app/internal/errors/main"
+	"social-media-app/internal/shared/consts"
+	usersDTO "social-media-app/internal/shared/dto/users"
+	mainErrors "social-media-app/internal/shared/errors/main"
 )
 
 type repository struct {

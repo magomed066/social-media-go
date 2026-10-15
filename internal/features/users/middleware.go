@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	mainErrors "social-media-app/internal/errors/main"
+	mainErrors "social-media-app/internal/shared/errors/main"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"

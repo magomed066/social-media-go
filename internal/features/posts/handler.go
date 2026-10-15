@@ -3,9 +3,9 @@ package posts
 import (
 	"errors"
 	"net/http"
-	postsDTO "social-media-app/internal/dto/posts"
-	mainErrors "social-media-app/internal/errors/main"
 	"social-media-app/internal/json"
+	postsDTO "social-media-app/internal/shared/dto/posts"
+	mainErrors "social-media-app/internal/shared/errors/main"
 )
 
 type Handler struct {
