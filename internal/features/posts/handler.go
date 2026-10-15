@@ -126,3 +126,18 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	json.WriteJSON(w, http.StatusNoContent, nil)
 }
+
+func (h *Handler) GetUserFeed(w http.ResponseWriter, r *http.Request) {
+	userID := 3
+	posts, err := h.service.GetUserFeed(r.Context(), int64(userID))
+	if err != nil {
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := json.WriteJSON(w, http.StatusOK, posts); err != nil {
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+}

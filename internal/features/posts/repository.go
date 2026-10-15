@@ -134,3 +134,60 @@ func (r *repository) Update(ctx context.Context, post *Post) error {
 
 	return nil
 }
+
+func (r *repository) GetUserFeed(ctx context.Context, userID int64) ([]PostWithMetaData, error) {
+	query := `
+		SELECT p.id, p.user_id, p.title, p.content, p.created_at, p.version, p.tags, u.username, u.id,
+    	COUNT(c.id) AS comments_count
+		FROM posts p
+		LEFT JOIN comments c ON c.post_id = p.id
+		LEFT JOIN users u ON p.user_id = u.id
+		WHERE p.user_id = $1
+   		OR EXISTS (
+       		SELECT 1
+       		FROM followers f
+       		WHERE f.follower_id = p.user_id
+         	AND f.user_id = $1
+		)
+		GROUP BY p.id, u.username, u.id
+		ORDER BY p.created_at DESC;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
+
+	var feed []PostWithMetaData
+
+	rows, err := r.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return []PostWithMetaData{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var post PostWithMetaData
+
+		err := rows.Scan(
+			&post.ID,
+			&post.UserID,
+			&post.Title,
+			&post.Content,
+			&post.CreatedAt,
+			&post.Version,
+			pq.Array(&post.Tags),
+			&post.User.Username,
+			&post.User.ID,
+			&post.CommentsCount,
+		)
+		if err != nil {
+			return []PostWithMetaData{}, err
+		}
+
+		feed = append(feed, post)
+	}
+	if err := rows.Err(); err != nil {
+		return []PostWithMetaData{}, err
+	}
+
+	return feed, nil
+}

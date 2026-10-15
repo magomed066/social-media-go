@@ -53,3 +53,7 @@ func (s *service) Delete(ctx context.Context, id int64) error {
 func (s *service) Update(ctx context.Context, post *Post) error {
 	return s.repository.Update(ctx, post)
 }
+
+func (s *service) GetUserFeed(ctx context.Context, userID int64) ([]PostWithMetaData, error) {
+	return s.repository.GetUserFeed(ctx, userID)
+}
