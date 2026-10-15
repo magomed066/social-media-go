@@ -37,7 +37,7 @@ func WriteJSONError(w http.ResponseWriter, status int, message string) error {
 	setHeaderConfig(w, status)
 
 	return json.NewEncoder(w).Encode(envelope{
-		Success: true,
+		Success: false,
 		Data:    nil,
 		Error:   message,
 	})

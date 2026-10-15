@@ -58,7 +58,9 @@ func (app *application) mount() http.Handler {
 				r.Get("/", app.handlers.Posts.GetByID)
 				r.Patch("/", app.handlers.Posts.Update)
 				r.Delete("/", app.handlers.Posts.Delete)
+
 				r.Get("/comments", app.handlers.Comments.GetByPostID)
+				r.Post("/comments", app.handlers.Comments.Create)
 			})
 		})
 	})

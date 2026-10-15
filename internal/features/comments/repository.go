@@ -3,6 +3,7 @@ package comments
 import (
 	"context"
 	"database/sql"
+	"social-media-app/internal/consts"
 	"time"
 )
 
@@ -51,4 +52,38 @@ func (r *repository) GetByPostID(ctx context.Context, postID int64) ([]Comment, 
 	}
 
 	return comments, nil
+}
+
+func (r *repository) Create(ctx context.Context, comment *Comment) error {
+	query := `
+		WITH created_comment AS (
+			INSERT INTO comments (content, post_id, user_id)
+			VALUES ($1, $2, $3)
+			RETURNING id, created_at, user_id
+		)
+		SELECT c.id, c.created_at, u.id, u.username
+		FROM created_comment c
+		JOIN users u ON u.id = c.user_id
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
+
+	err := r.db.QueryRowContext(
+		ctx,
+		query,
+		comment.Content,
+		comment.PostID,
+		comment.UserID,
+	).Scan(
+		&comment.ID,
+		&comment.CreatedAt,
+		&comment.User.ID,
+		&comment.User.Username,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

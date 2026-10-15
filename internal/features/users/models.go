@@ -9,3 +9,8 @@ type User struct {
 	Password  string `json:"-"`
 	CreatedAt string `json:"created_at"`
 }
+
+type Author struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+}
