@@ -6,6 +6,7 @@ import (
 	"errors"
 	"social-media-app/internal/shared/consts"
 	mainErrors "social-media-app/internal/shared/errors/main"
+	"social-media-app/internal/shared/pagination"
 
 	"github.com/lib/pq"
 )
@@ -135,7 +136,7 @@ func (r *repository) Update(ctx context.Context, post *Post) error {
 	return nil
 }
 
-func (r *repository) GetUserFeed(ctx context.Context, userID int64) ([]PostWithMetaData, error) {
+func (r *repository) GetUserFeed(ctx context.Context, userID int64, pagination pagination.Pagination) ([]PostWithMetaData, error) {
 	query := `
 		SELECT p.id, p.user_id, p.title, p.content, p.created_at, p.version, p.tags, u.username, u.id,
     	COUNT(c.id) AS comments_count
@@ -150,7 +151,8 @@ func (r *repository) GetUserFeed(ctx context.Context, userID int64) ([]PostWithM
          	AND f.user_id = $1
 		)
 		GROUP BY p.id, u.username, u.id
-		ORDER BY p.created_at DESC;
+		ORDER BY p.created_at ` + pagination.Sort + `
+		LIMIT $2 OFFSET $3
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
@@ -158,7 +160,12 @@ func (r *repository) GetUserFeed(ctx context.Context, userID int64) ([]PostWithM
 
 	var feed []PostWithMetaData
 
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	rows, err := r.db.QueryContext(
+		ctx, query,
+		userID,
+		pagination.Limit,
+		pagination.Offset,
+	)
 	if err != nil {
 		return []PostWithMetaData{}, err
 	}

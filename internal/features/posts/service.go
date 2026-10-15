@@ -4,6 +4,7 @@ import (
 	"context"
 	"social-media-app/internal/features/comments"
 	postsDTO "social-media-app/internal/shared/dto/posts"
+	"social-media-app/internal/shared/pagination"
 )
 
 type CommentsService interface {
@@ -54,6 +55,6 @@ func (s *service) Update(ctx context.Context, post *Post) error {
 	return s.repository.Update(ctx, post)
 }
 
-func (s *service) GetUserFeed(ctx context.Context, userID int64) ([]PostWithMetaData, error) {
-	return s.repository.GetUserFeed(ctx, userID)
+func (s *service) GetUserFeed(ctx context.Context, userID int64, pagination pagination.Pagination) ([]PostWithMetaData, error) {
+	return s.repository.GetUserFeed(ctx, userID, pagination)
 }
