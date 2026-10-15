@@ -10,6 +10,10 @@ MIGRATION_NAME = $(word 2,$(MAKECMDGOALS))
 migration migrate-create:
 	@migrate create -seq -ext sql -dir "$(MIGRATION_PATH)" "$(MIGRATION_NAME)"
 
+.PHONY: seed
+seed:
+	@go run ./cmd/migrate/seed
+
 migrate-up:
 	@$(MIGRATE) up
 

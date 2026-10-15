@@ -3,11 +3,13 @@ package main
 import (
 	"social-media-app/internal/db"
 	"social-media-app/internal/env"
-	"social-media-app/internal/store"
+	"social-media-app/internal/handlers"
 
 	"charm.land/log/v2"
 	"github.com/joho/godotenv"
 )
+
+const version = "0.0.1"
 
 func main() {
 	initialize()
@@ -20,6 +22,7 @@ func main() {
 			maxIdleConns: env.GetInt("DB_MAX_IDLE_CONNS", 30),
 			maxIdleTime:  env.GetString("DB_MAX_IDLE_TIME", "15m"),
 		},
+		env: env.GetString("ENVIRONMENT", "development"),
 	}
 
 	db, err := db.New(
@@ -34,11 +37,11 @@ func main() {
 	defer db.Close()
 	log.Info("db connection pool established")
 
-	store := store.NewPostgresStorage(db)
+	handlers := handlers.NewHandlers(db)
 
 	app := &application{
-		config: cfg,
-		store:  store,
+		config:   cfg,
+		handlers: handlers,
 	}
 
 	if err := app.run(app.mount()); err != nil {

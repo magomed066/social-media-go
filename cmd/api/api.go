@@ -2,7 +2,7 @@ package main
 
 import (
 	"net/http"
-	"social-media-app/internal/store"
+	"social-media-app/internal/handlers"
 	"time"
 
 	"charm.land/log/v2"
@@ -11,13 +11,14 @@ import (
 )
 
 type application struct {
-	config config
-	store  store.Storage
+	config   config
+	handlers handlers.Handlers
 }
 
 type config struct {
 	addr string
 	db   dbConfig
+	env  string
 }
 
 type dbConfig struct {
@@ -41,8 +42,27 @@ func (app *application) mount() http.Handler {
 	// processing should be stopped.
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	// Dependencies
+
 	r.Route("/v1", func(r chi.Router) {
-		r.Get("/health", app.healthCheckHandler)
+		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("server has started"))
+		})
+
+		r.Route("/posts", func(r chi.Router) {
+			r.Post("/", app.handlers.Posts.Create)
+
+			r.Route("/{postID}", func(r chi.Router) {
+				r.Use(app.handlers.Posts.PostContextMiddleware)
+
+				r.Get("/", app.handlers.Posts.GetByID)
+				r.Patch("/", app.handlers.Posts.Update)
+				r.Delete("/", app.handlers.Posts.Delete)
+
+				r.Get("/comments", app.handlers.Comments.GetByPostID)
+				r.Post("/comments", app.handlers.Comments.Create)
+			})
+		})
 	})
 
 	return r
