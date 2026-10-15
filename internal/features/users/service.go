@@ -1,6 +1,9 @@
 package users
 
-import "context"
+import (
+	"context"
+	usersDTO "social-media-app/internal/dto/users"
+)
 
 type service struct {
 	repository repository
@@ -19,4 +22,12 @@ func (s *service) GetByID(ctx context.Context, userID int64) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (s *service) Follow(ctx context.Context, payload usersDTO.FollowPayload) error {
+	return s.repository.Follow(ctx, payload)
+}
+
+func (s *service) UnFollow(ctx context.Context, payload usersDTO.FollowPayload) error {
+	return s.repository.UnFollow(ctx, payload)
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"social-media-app/internal/consts"
+	usersDTO "social-media-app/internal/dto/users"
 	mainErrors "social-media-app/internal/errors/main"
 )
 
@@ -74,4 +75,40 @@ func (r *repository) GetByID(ctx context.Context, userID int64) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (r *repository) Follow(ctx context.Context, payload usersDTO.FollowPayload) error {
+	query := `
+		INSERT INTO followers (user_id, follower_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, follower_id) DO NOTHING
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
+
+	_, err := r.db.ExecContext(ctx, query, payload.UserID, payload.FollowerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *repository) UnFollow(ctx context.Context, payload usersDTO.FollowPayload) error {
+	query := `
+		DELETE FROM followers
+		WHERE user_id = $1 
+		AND follower_id = $2
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
+
+	_, err := r.db.ExecContext(ctx, query, payload.UserID, payload.FollowerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
