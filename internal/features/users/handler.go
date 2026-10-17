@@ -17,12 +17,41 @@ func NewHandler(service service) Handler {
 	}
 }
 
+// Get User By ID godoc
+//
+//	@Summary		Fetch a user
+//	@Description	Fetches a user by id
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			userID	path		int	true	"User ID"
+//	@Success		200		{object}	json.envelope{data=User}
+//	@Failure		400		{object}	json.envelope
+//	@Failure		404		{object}	json.envelope
+//	@Failure		500		{object}	json.envelope
+//	@Security		ApiKeyAuth
+//	@Router			/users/{userID}/ [get]
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r.Context())
 
 	json.WriteJSON(w, http.StatusOK, user)
 }
 
+// Follow godoc
+//
+//	@Summary		Follow a user
+//	@Description	Adds the user identified by user_id in the request body as a follower of the user in the path.
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			userID	path	int								true	"User ID to follow"
+//	@Param			payload	body	usersDTO.FollowerUserPayload	true	"Follower's user ID"
+//	@Success		204		"No Content"
+//	@Failure		400		{object}	json.envelope
+//	@Failure		404		{object}	json.envelope
+//	@Failure		500		{object}	json.envelope
+//	@Security		ApiKeyAuth
+//	@Router			/users/{userID}/follow [put]
 func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r.Context())
 
@@ -48,6 +77,21 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UnFollow godoc
+//
+//	@Summary		Unfollow a user
+//	@Description	Removes the user identified by user_id in the request body as a follower of the user in the path.
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			userID	path	int								true	"User ID to unfollow"
+//	@Param			payload	body	usersDTO.FollowerUserPayload	true	"Follower's user ID"
+//	@Success		204		"No Content"
+//	@Failure		400		{object}	json.envelope
+//	@Failure		404		{object}	json.envelope
+//	@Failure		500		{object}	json.envelope
+//	@Security		ApiKeyAuth
+//	@Router			/users/{userID}/unfollow [put]
 func (h *Handler) UnFollow(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r.Context())
 
