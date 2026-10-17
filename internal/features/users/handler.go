@@ -1,10 +1,14 @@
 package users
 
 import (
+	"errors"
 	"net/http"
 	"social-media-app/internal/json"
 	usersDTO "social-media-app/internal/shared/dto/users"
 	mainErrors "social-media-app/internal/shared/errors/main"
+	usersErrors "social-media-app/internal/shared/errors/users"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
@@ -115,4 +119,44 @@ func (h *Handler) UnFollow(w http.ResponseWriter, r *http.Request) {
 	if err := json.WriteJSON(w, http.StatusNoContent, nil); err != nil {
 		mainErrors.InternalServerError(w, r, err)
 	}
+}
+
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	var payload usersDTO.RegisterUserPayload
+
+	if err := json.ReadJson(w, r, &payload); err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	if err := json.Validate.Struct(payload); err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	user, err := h.service.Register(r.Context(), payload)
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrPasswordTooLong) {
+			mainErrors.BadRequestResponse(w, r, usersErrors.ErrPasswordTooLong)
+			return
+		}
+
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := json.WriteJSON(w, http.StatusCreated, user); err != nil {
+		mainErrors.InternalServerError(w, r, err)
+	}
+
+	// hashing password
+	// hash, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+	// if err != nil {
+	// 	mainErrors.InternalServerError(w, r, err)
+	// 	return
+	// }
+
+	// user.Password = hah
+
+	// json.WriteJSON(w, http.StatusCreated, payload)
 }

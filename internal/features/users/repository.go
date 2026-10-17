@@ -112,3 +112,5 @@ func (r *repository) UnFollow(ctx context.Context, payload usersDTO.FollowPayloa
 
 	return nil
 }
+
+func (r *repository) Register(ctx context.Context) {}
