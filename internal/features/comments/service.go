@@ -2,7 +2,7 @@ package comments
 
 import (
 	"context"
-	commentsDTO "social-media-app/internal/dto/comments"
+	commentsDTO "social-media-app/internal/shared/dto/comments"
 )
 
 type service struct {

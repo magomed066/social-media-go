@@ -1,6 +1,9 @@
 package posts
 
-import "social-media-app/internal/features/comments"
+import (
+	"social-media-app/internal/features/comments"
+	"social-media-app/internal/features/users"
+)
 
 type Post struct {
 	ID        int64              `json:"id"`
@@ -11,6 +14,12 @@ type Post struct {
 	CreatedAt string             `json:"created_at"`
 	UpdatedAt string             `json:"updated_at"`
 	Comments  []comments.Comment `json:"comments"`
+	User      users.Author       `json:"user"`
 
 	Version int `json:"version"`
+}
+
+type PostWithMetaData struct {
+	Post
+	CommentsCount int `json:"comments_count"`
 }

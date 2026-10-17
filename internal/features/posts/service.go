@@ -2,8 +2,9 @@ package posts
 
 import (
 	"context"
-	postsDTO "social-media-app/internal/dto/posts"
 	"social-media-app/internal/features/comments"
+	postsDTO "social-media-app/internal/shared/dto/posts"
+	"social-media-app/internal/shared/pagination"
 )
 
 type CommentsService interface {
@@ -52,4 +53,8 @@ func (s *service) Delete(ctx context.Context, id int64) error {
 
 func (s *service) Update(ctx context.Context, post *Post) error {
 	return s.repository.Update(ctx, post)
+}
+
+func (s *service) GetUserFeed(ctx context.Context, userID int64, pagination pagination.Pagination) ([]PostWithMetaData, error) {
+	return s.repository.GetUserFeed(ctx, userID, pagination)
 }

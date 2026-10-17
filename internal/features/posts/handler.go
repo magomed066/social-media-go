@@ -3,9 +3,10 @@ package posts
 import (
 	"errors"
 	"net/http"
-	postsDTO "social-media-app/internal/dto/posts"
-	mainErrors "social-media-app/internal/errors/main"
 	"social-media-app/internal/json"
+	postsDTO "social-media-app/internal/shared/dto/posts"
+	mainErrors "social-media-app/internal/shared/errors/main"
+	"social-media-app/internal/shared/pagination"
 )
 
 type Handler struct {
@@ -125,4 +126,36 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.WriteJSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) GetUserFeed(w http.ResponseWriter, r *http.Request) {
+	pagination := pagination.Pagination{
+		Limit:  20,
+		Offset: 0,
+		Sort:   "desc",
+	}
+
+	pagination, err := pagination.Parse(r)
+	if err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	if err := json.Validate.Struct(pagination); err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	userID := 3
+	posts, err := h.service.GetUserFeed(r.Context(), int64(userID), pagination)
+	if err != nil {
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := json.WriteJSON(w, http.StatusOK, posts); err != nil {
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
 }

@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"social-media-app/internal/consts"
-	mainErrors "social-media-app/internal/errors/main"
+	"social-media-app/internal/shared/consts"
+	mainErrors "social-media-app/internal/shared/errors/main"
+	"social-media-app/internal/shared/pagination"
 
 	"github.com/lib/pq"
 )
@@ -133,4 +134,87 @@ func (r *repository) Update(ctx context.Context, post *Post) error {
 	post.Version++
 
 	return nil
+}
+
+func (r *repository) GetUserFeed(ctx context.Context, userID int64, pagination pagination.Pagination) ([]PostWithMetaData, error) {
+	query := `
+		SELECT p.id, p.user_id, p.title, p.content, p.created_at, p.version, p.tags, u.username, u.id,
+    	COUNT(c.id) AS comments_count
+		FROM posts p
+		LEFT JOIN comments c ON c.post_id = p.id
+		LEFT JOIN users u ON p.user_id = u.id
+		WHERE ( 
+			p.user_id = $1
+			OR EXISTS (
+				SELECT 1
+				FROM followers f
+				WHERE f.follower_id = p.user_id
+				AND f.user_id = $1
+			)
+		)
+		AND (
+    		p.title ILIKE '%' || $4 || '%'
+    		OR p.content ILIKE '%' || $4 || '%'
+		)
+		AND (
+			COALESCE(cardinality($5::text[]), 0) = 0
+   		 	OR p.tags @> $5::text[]
+		)
+		AND (
+			$6::timestamptz IS NULL OR p.created_at >= $6::timestamptz
+		)
+		AND (
+			$7::timestamptz IS NULL OR p.created_at < $7::timestamptz
+		)
+		GROUP BY p.id, u.username, u.id
+		ORDER BY p.created_at ` + pagination.Sort + `
+		LIMIT $2 OFFSET $3
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
+
+	var feed []PostWithMetaData
+
+	rows, err := r.db.QueryContext(
+		ctx, query,
+		userID,
+		pagination.Limit,
+		pagination.Offset,
+		pagination.Search,
+		pq.Array(pagination.Tags),
+		pagination.From,
+		pagination.To,
+	)
+	if err != nil {
+		return []PostWithMetaData{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var post PostWithMetaData
+
+		err := rows.Scan(
+			&post.ID,
+			&post.UserID,
+			&post.Title,
+			&post.Content,
+			&post.CreatedAt,
+			&post.Version,
+			pq.Array(&post.Tags),
+			&post.User.Username,
+			&post.User.ID,
+			&post.CommentsCount,
+		)
+		if err != nil {
+			return []PostWithMetaData{}, err
+		}
+
+		feed = append(feed, post)
+	}
+	if err := rows.Err(); err != nil {
+		return []PostWithMetaData{}, err
+	}
+
+	return feed, nil
 }

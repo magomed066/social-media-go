@@ -3,9 +3,9 @@ package comments
 import (
 	"errors"
 	"net/http"
-	commentsDTO "social-media-app/internal/dto/comments"
-	mainErrors "social-media-app/internal/errors/main"
 	"social-media-app/internal/json"
+	commentsDTO "social-media-app/internal/shared/dto/comments"
+	mainErrors "social-media-app/internal/shared/errors/main"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
