@@ -8,6 +8,7 @@ import (
 	mainErrors "social-media-app/internal/shared/errors/main"
 	usersErrors "social-media-app/internal/shared/errors/users"
 
+	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -121,6 +122,18 @@ func (h *Handler) UnFollow(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Register godoc
+//
+//	@Summary		Register a user
+//	@Description	Creates an inactive user and an invitation for account activation.
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		usersDTO.RegisterUserPayload	true	"User registration details"
+//	@Success		201		{object}	json.envelope{data=UserWithToken}
+//	@Failure		400		{object}	json.envelope	"Invalid registration details or duplicate email or username"
+//	@Failure		500		{object}	json.envelope
+//	@Router			/users/auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var payload usersDTO.RegisterUserPayload
 
@@ -156,6 +169,36 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.WriteJSON(w, http.StatusCreated, user); err != nil {
+		mainErrors.InternalServerError(w, r, err)
+	}
+}
+
+// ActivateUser godoc
+//
+//	@Summary		Activate a user
+//	@Description	Activates a user using an unexpired invitation token.
+//	@Tags			Users
+//	@Produce		json
+//	@Param			token	path	string	true	"Invitation token"
+//	@Success		204		"No Content"
+//	@Failure		400		{object}	json.envelope	"Invalid or expired invitation token"
+//	@Failure		500		{object}	json.envelope
+//	@Router			/users/activate/{token} [put]
+func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
+	token := chi.URLParam(r, "token")
+
+	err := h.service.ActivateUser(r.Context(), token)
+	if err != nil {
+		if errors.Is(err, mainErrors.ErrNotFound) {
+			mainErrors.NotFoundResponse(w, r, err)
+			return
+		}
+
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := json.WriteJSON(w, http.StatusNoContent, ""); err != nil {
 		mainErrors.InternalServerError(w, r, err)
 	}
 }
