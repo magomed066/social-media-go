@@ -141,6 +141,16 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if err == usersErrors.ErrDuplicateEmail {
+			mainErrors.BadRequestResponse(w, r, usersErrors.ErrDuplicateEmail)
+			return
+		}
+
+		if err == usersErrors.ErrDuplicateUsername {
+			mainErrors.BadRequestResponse(w, r, usersErrors.ErrDuplicateUsername)
+			return
+		}
+
 		mainErrors.InternalServerError(w, r, err)
 		return
 	}
@@ -148,15 +158,4 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	if err := json.WriteJSON(w, http.StatusCreated, user); err != nil {
 		mainErrors.InternalServerError(w, r, err)
 	}
-
-	// hashing password
-	// hash, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
-	// if err != nil {
-	// 	mainErrors.InternalServerError(w, r, err)
-	// 	return
-	// }
-
-	// user.Password = hah
-
-	// json.WriteJSON(w, http.StatusCreated, payload)
 }

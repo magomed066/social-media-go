@@ -2,7 +2,11 @@ package users
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"social-media-app/internal/shared/consts"
 	usersDTO "social-media-app/internal/shared/dto/users"
+	"uuid"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -48,7 +52,12 @@ func (s *service) Register(ctx context.Context, payload usersDTO.RegisterUserPay
 		Password:  string(hash),
 	}
 
-	if err := s.repository.Create(ctx, user); err != nil {
+	plainToken := uuid.New().String()
+	hashed := sha256.Sum256([]byte(plainToken))
+	hashToken := hex.EncodeToString(hashed[:])
+
+	err = s.repository.CreateAndInvite(ctx, user, hashToken, consts.MailExpires)
+	if err != nil {
 		return nil, err
 	}
 
