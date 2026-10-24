@@ -64,6 +64,7 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/swaggo/files/v2 v2.0.0 // indirect
 	github.com/tdewolff/parse/v2 v2.8.12 // indirect
+	github.com/wneessen/go-mail v0.8.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect

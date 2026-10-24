@@ -5,6 +5,7 @@ import (
 	"social-media-app/internal/features/comments"
 	"social-media-app/internal/features/posts"
 	"social-media-app/internal/features/users"
+	"social-media-app/internal/mailer"
 )
 
 type Handlers struct {
@@ -13,7 +14,7 @@ type Handlers struct {
 	Users    users.Handler
 }
 
-func NewHandlers(db *sql.DB) Handlers {
+func NewHandlers(db *sql.DB, mailer *mailer.WnessenMailer, isSandbox bool, frontendUrl string) Handlers {
 
 	// Comments
 	commentsRepository := comments.NewRepository(db)
@@ -28,7 +29,7 @@ func NewHandlers(db *sql.DB) Handlers {
 	// Users
 	usersRepository := users.NewRepository(db)
 	usersService := users.NewService(usersRepository)
-	usersHandler := users.NewHandler(usersService)
+	usersHandler := users.NewHandler(usersService, mailer, isSandbox, frontendUrl)
 
 	return Handlers{
 		Posts:    postsHandler,

@@ -1,25 +1,36 @@
 package users
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"social-media-app/internal/json"
+	"social-media-app/internal/mailer"
 	usersDTO "social-media-app/internal/shared/dto/users"
 	mainErrors "social-media-app/internal/shared/errors/main"
 	usersErrors "social-media-app/internal/shared/errors/users"
 	"strconv"
+	"time"
 
+	"charm.land/log/v2"
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
-	service service
+	service     service
+	mailer      *mailer.WnessenMailer
+	isSandbox   bool
+	frontendUrl string
 }
 
-func NewHandler(service service) Handler {
+func NewHandler(service service, mailer *mailer.WnessenMailer, isSandbox bool, frontendUrl string) Handler {
 	return Handler{
-		service: service,
+		service:     service,
+		mailer:      mailer,
+		isSandbox:   isSandbox,
+		frontendUrl: frontendUrl,
 	}
 }
 
@@ -165,6 +176,43 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	// Send email
+	activationURL := fmt.Sprintf("%s/confirm/%s", h.frontendUrl, user.Token)
+
+	vars := struct {
+		Username      string
+		ActivationURL string
+	}{
+		Username:      user.Username,
+		ActivationURL: activationURL,
+	}
+
+	// err = h.mailer.Send(mailer.UserWelcomeTemplate, user.Username, user.Email, vars, h.isSandbox)
+	err = h.mailer.Send(
+		user.Email,
+		mailer.UserWelcomeTemplate,
+		vars,
+	)
+	if err != nil {
+		log.Error("error sending welcome email")
+
+		cleanupCtx, cancel := context.WithTimeout(
+			context.WithoutCancel(r.Context()),
+			time.Second*20,
+		)
+		defer cancel()
+
+		// rollback user creation if email fails (SAGA pattern)
+		if deleteErr := h.service.Delete(cleanupCtx, user.ID); deleteErr != nil {
+			log.Error("error deleting user",
+				"user_id", user.ID,
+				"error", deleteErr,
+			)
+		}
 		mainErrors.InternalServerError(w, r, err)
 		return
 	}

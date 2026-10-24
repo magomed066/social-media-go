@@ -172,15 +172,11 @@ func (r *repository) ActivateUser(ctx context.Context, token string) error {
 
 func (r *repository) Delete(ctx context.Context, userID int64) error {
 	return dbUtils.WithTransaction(r.db, ctx, func(tx *sql.Tx) error {
-		if err := r.delete(ctx, tx, userID); err != nil {
-			return err
-		}
-
 		if err := r.deleteInvitation(ctx, tx, userID); err != nil {
 			return err
 		}
 
-		return nil
+		return r.delete(ctx, tx, userID)
 	})
 }
 

@@ -4,6 +4,8 @@ import (
 	"social-media-app/internal/db"
 	"social-media-app/internal/env"
 	"social-media-app/internal/handlers"
+	"social-media-app/internal/mailer"
+	"time"
 
 	"charm.land/log/v2"
 	"github.com/joho/godotenv"
@@ -42,6 +44,12 @@ func main() {
 			maxIdleTime:  env.GetString("DB_MAX_IDLE_TIME", "15m"),
 		},
 		env: env.GetString("ENVIRONMENT", "development"),
+		mail: mailConfig{
+			host:      env.GetString("MAIL_HOST", ""),
+			exp:       time.Hour * 24 * 3, // 3 days
+			fromEmail: env.GetString("FROM_EMAIL", ""),
+		},
+		frontendUrl: env.GetString("FRONTEND_URL", "localhost:5173"),
 	}
 
 	db, err := db.New(
@@ -56,7 +64,17 @@ func main() {
 	defer db.Close()
 	log.Info("db connection pool established")
 
-	handlers := handlers.NewHandlers(db)
+	mailer, err := mailer.NewWnessenMailer(
+		cfg.mail.host,
+		cfg.mail.fromEmail,
+		env.GetString("SMTP_USERNAME", ""),
+		env.GetString("SMTP_PASSWORD", ""),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	handlers := handlers.NewHandlers(db, mailer, cfg.env != "production", cfg.frontendUrl)
 
 	app := &application{
 		config:   cfg,
