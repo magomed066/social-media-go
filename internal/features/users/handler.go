@@ -1,10 +1,15 @@
 package users
 
 import (
+	"errors"
 	"net/http"
 	"social-media-app/internal/json"
 	usersDTO "social-media-app/internal/shared/dto/users"
 	mainErrors "social-media-app/internal/shared/errors/main"
+	usersErrors "social-media-app/internal/shared/errors/users"
+
+	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
@@ -113,6 +118,87 @@ func (h *Handler) UnFollow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.WriteJSON(w, http.StatusNoContent, nil); err != nil {
+		mainErrors.InternalServerError(w, r, err)
+	}
+}
+
+// Register godoc
+//
+//	@Summary		Register a user
+//	@Description	Creates an inactive user and an invitation for account activation.
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		usersDTO.RegisterUserPayload	true	"User registration details"
+//	@Success		201		{object}	json.envelope{data=UserWithToken}
+//	@Failure		400		{object}	json.envelope	"Invalid registration details or duplicate email or username"
+//	@Failure		500		{object}	json.envelope
+//	@Router			/users/auth/register [post]
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	var payload usersDTO.RegisterUserPayload
+
+	if err := json.ReadJson(w, r, &payload); err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	if err := json.Validate.Struct(payload); err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	user, err := h.service.Register(r.Context(), payload)
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrPasswordTooLong) {
+			mainErrors.BadRequestResponse(w, r, usersErrors.ErrPasswordTooLong)
+			return
+		}
+
+		if err == usersErrors.ErrDuplicateEmail {
+			mainErrors.BadRequestResponse(w, r, usersErrors.ErrDuplicateEmail)
+			return
+		}
+
+		if err == usersErrors.ErrDuplicateUsername {
+			mainErrors.BadRequestResponse(w, r, usersErrors.ErrDuplicateUsername)
+			return
+		}
+
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := json.WriteJSON(w, http.StatusCreated, user); err != nil {
+		mainErrors.InternalServerError(w, r, err)
+	}
+}
+
+// ActivateUser godoc
+//
+//	@Summary		Activate a user
+//	@Description	Activates a user using an unexpired invitation token.
+//	@Tags			Users
+//	@Produce		json
+//	@Param			token	path	string	true	"Invitation token"
+//	@Success		204		"No Content"
+//	@Failure		400		{object}	json.envelope	"Invalid or expired invitation token"
+//	@Failure		500		{object}	json.envelope
+//	@Router			/users/activate/{token} [put]
+func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
+	token := chi.URLParam(r, "token")
+
+	err := h.service.ActivateUser(r.Context(), token)
+	if err != nil {
+		if errors.Is(err, mainErrors.ErrNotFound) {
+			mainErrors.NotFoundResponse(w, r, err)
+			return
+		}
+
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := json.WriteJSON(w, http.StatusNoContent, ""); err != nil {
 		mainErrors.InternalServerError(w, r, err)
 	}
 }

@@ -18,7 +18,28 @@ definitions:
         type: string
       id:
         type: integer
+      is_active:
+        type: boolean
       last_name:
+        type: string
+      username:
+        type: string
+    type: object
+  users.UserWithToken:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+      token:
         type: string
       username:
         type: string
@@ -27,6 +48,30 @@ definitions:
     properties:
       user_id:
         type: integer
+    type: object
+  usersDTO.RegisterUserPayload:
+    properties:
+      email:
+        type: string
+      first_name:
+        maxLength: 100
+        type: string
+      last_name:
+        maxLength: 255
+        type: string
+      password:
+        maxLength: 72
+        minLength: 3
+        type: string
+      username:
+        maxLength: 50
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    - username
     type: object
 info:
   contact:
@@ -159,6 +204,66 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Unfollow a user
+      tags:
+      - Users
+  /users/activate/{token}:
+    put:
+      description: Activates a user using an unexpired invitation token.
+      parameters:
+      - description: Invitation token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid or expired invitation token
+          schema:
+            $ref: '#/definitions/json.envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/json.envelope'
+      summary: Activate a user
+      tags:
+      - Users
+  /users/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates an inactive user and an invitation for account activation.
+      parameters:
+      - description: User registration details
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/usersDTO.RegisterUserPayload'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/json.envelope'
+            - properties:
+                data:
+                  $ref: '#/definitions/users.UserWithToken'
+              type: object
+        "400":
+          description: Invalid registration details or duplicate email or username
+          schema:
+            $ref: '#/definitions/json.envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/json.envelope'
+      summary: Register a user
       tags:
       - Users
 securityDefinitions:

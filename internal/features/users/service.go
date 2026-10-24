@@ -2,7 +2,13 @@ package users
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"social-media-app/internal/shared/consts"
 	usersDTO "social-media-app/internal/shared/dto/users"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type service struct {
@@ -30,4 +36,39 @@ func (s *service) Follow(ctx context.Context, payload usersDTO.FollowPayload) er
 
 func (s *service) UnFollow(ctx context.Context, payload usersDTO.FollowPayload) error {
 	return s.repository.UnFollow(ctx, payload)
+}
+
+func (s *service) Register(ctx context.Context, payload usersDTO.RegisterUserPayload) (*UserWithToken, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &User{
+		Firstname: payload.Firstname,
+		Lastname:  payload.Lastname,
+		Email:     payload.Email,
+		Username:  payload.Username,
+		Password:  string(hash),
+	}
+
+	plainToken := uuid.New().String()
+	hashed := sha256.Sum256([]byte(plainToken))
+	hashToken := hex.EncodeToString(hashed[:])
+
+	userWithToken := UserWithToken{
+		User:  user,
+		Token: plainToken,
+	}
+
+	err = s.repository.CreateAndInvite(ctx, user, hashToken, consts.MailExpires)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userWithToken, nil
+}
+
+func (s *service) ActivateUser(ctx context.Context, token string) error {
+	return s.repository.ActivateUser(ctx, token)
 }
