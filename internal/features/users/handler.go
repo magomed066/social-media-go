@@ -7,6 +7,7 @@ import (
 	usersDTO "social-media-app/internal/shared/dto/users"
 	mainErrors "social-media-app/internal/shared/errors/main"
 	usersErrors "social-media-app/internal/shared/errors/users"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -181,7 +182,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			token	path	string	true	"Invitation token"
 //	@Success		204		"No Content"
-//	@Failure		400		{object}	json.envelope	"Invalid or expired invitation token"
+//	@Failure		404		{object}	json.envelope	"Invalid or expired invitation token"
 //	@Failure		500		{object}	json.envelope
 //	@Router			/users/activate/{token} [put]
 func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
@@ -200,5 +201,41 @@ func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.WriteJSON(w, http.StatusNoContent, ""); err != nil {
 		mainErrors.InternalServerError(w, r, err)
+	}
+}
+
+// Delete godoc
+//
+//	@Summary		Delete a user
+//	@Description	Deletes a user by ID.
+//	@Tags			Users
+//	@Produce		json
+//	@Param			userID	path	int	true	"User ID"
+//	@Success		204		"No Content"
+//	@Failure		404		{object}	json.envelope	"Invalid user ID or user not found"
+//	@Failure		500		{object}	json.envelope
+//	@Router			/users/delete/{userID} [delete]
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userID")
+
+	parsedUserID, err := strconv.Atoi(userID)
+	if err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	if err := h.service.Delete(r.Context(), int64(parsedUserID)); err != nil {
+		if errors.Is(err, mainErrors.ErrNotFound) {
+			mainErrors.NotFoundResponse(w, r, err)
+			return
+		}
+
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := json.WriteJSON(w, http.StatusNoContent, ""); err != nil {
+		mainErrors.InternalServerError(w, r, err)
+		return
 	}
 }

@@ -77,6 +77,8 @@ func (app *application) mount() http.Handler {
 		r.Route("/users", func(r chi.Router) {
 			r.Put("/activate/{token}", app.handlers.Users.ActivateUser)
 
+			r.Delete("/delete/{userID}", app.handlers.Users.Delete)
+
 			r.Route("/{userID}", func(r chi.Router) {
 				r.Use(app.handlers.Users.UserContextMiddleware)
 

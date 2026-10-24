@@ -220,7 +220,7 @@ paths:
       responses:
         "204":
           description: No Content
-        "400":
+        "404":
           description: Invalid or expired invitation token
           schema:
             $ref: '#/definitions/json.envelope'
@@ -264,6 +264,31 @@ paths:
           schema:
             $ref: '#/definitions/json.envelope'
       summary: Register a user
+      tags:
+      - Users
+  /users/delete/{userID}:
+    delete:
+      description: Deletes a user by ID.
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Invalid user ID or user not found
+          schema:
+            $ref: '#/definitions/json.envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/json.envelope'
+      summary: Delete a user
       tags:
       - Users
 securityDefinitions:

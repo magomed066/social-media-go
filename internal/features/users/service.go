@@ -72,3 +72,7 @@ func (s *service) Register(ctx context.Context, payload usersDTO.RegisterUserPay
 func (s *service) ActivateUser(ctx context.Context, token string) error {
 	return s.repository.ActivateUser(ctx, token)
 }
+
+func (s *service) Delete(ctx context.Context, userID int64) error {
+	return s.repository.Delete(ctx, userID)
+}
