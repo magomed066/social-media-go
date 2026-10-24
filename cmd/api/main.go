@@ -74,7 +74,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	handlers := handlers.NewHandlers(db, mailer, cfg.env != "production", cfg.frontendUrl)
+	handlers := handlers.NewHandlers(db, mailer, cfg.frontendUrl)
 
 	app := &application{
 		config:   cfg,

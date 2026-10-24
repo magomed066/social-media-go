@@ -21,15 +21,13 @@ import (
 type Handler struct {
 	service     service
 	mailer      *mailer.WnessenMailer
-	isSandbox   bool
 	frontendUrl string
 }
 
-func NewHandler(service service, mailer *mailer.WnessenMailer, isSandbox bool, frontendUrl string) Handler {
+func NewHandler(service service, mailer *mailer.WnessenMailer, frontendUrl string) Handler {
 	return Handler{
 		service:     service,
 		mailer:      mailer,
-		isSandbox:   isSandbox,
 		frontendUrl: frontendUrl,
 	}
 }
@@ -142,7 +140,7 @@ func (h *Handler) UnFollow(w http.ResponseWriter, r *http.Request) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			payload	body		usersDTO.RegisterUserPayload	true	"User registration details"
-//	@Success		201		{object}	json.envelope{data=UserWithToken}
+//	@Success		201		{object}	json.envelope{data=User}
 //	@Failure		400		{object}	json.envelope	"Invalid registration details or duplicate email or username"
 //	@Failure		500		{object}	json.envelope
 //	@Router			/users/auth/register [post]
@@ -191,7 +189,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		ActivationURL: activationURL,
 	}
 
-	// err = h.mailer.Send(mailer.UserWelcomeTemplate, user.Username, user.Email, vars, h.isSandbox)
 	err = h.mailer.Send(
 		user.Email,
 		mailer.UserWelcomeTemplate,
@@ -202,7 +199,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 		cleanupCtx, cancel := context.WithTimeout(
 			context.WithoutCancel(r.Context()),
-			time.Second*20,
+			time.Second*10,
 		)
 		defer cancel()
 
@@ -217,7 +214,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.WriteJSON(w, http.StatusCreated, user); err != nil {
+	if err := json.WriteJSON(w, http.StatusCreated, user.User); err != nil {
 		mainErrors.InternalServerError(w, r, err)
 	}
 }

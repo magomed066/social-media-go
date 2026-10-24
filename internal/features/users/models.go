@@ -18,5 +18,5 @@ type Author struct {
 
 type UserWithToken struct {
 	*User
-	Token string `json:"token"`
+	Token string `json:"-"`
 }

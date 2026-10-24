@@ -25,25 +25,6 @@ definitions:
       username:
         type: string
     type: object
-  users.UserWithToken:
-    properties:
-      created_at:
-        type: string
-      email:
-        type: string
-      first_name:
-        type: string
-      id:
-        type: integer
-      is_active:
-        type: boolean
-      last_name:
-        type: string
-      token:
-        type: string
-      username:
-        type: string
-    type: object
   usersDTO.FollowerUserPayload:
     properties:
       user_id:
@@ -253,7 +234,7 @@ paths:
             - $ref: '#/definitions/json.envelope'
             - properties:
                 data:
-                  $ref: '#/definitions/users.UserWithToken'
+                  $ref: '#/definitions/users.User'
               type: object
         "400":
           description: Invalid registration details or duplicate email or username

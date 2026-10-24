@@ -14,7 +14,7 @@ type Handlers struct {
 	Users    users.Handler
 }
 
-func NewHandlers(db *sql.DB, mailer *mailer.WnessenMailer, isSandbox bool, frontendUrl string) Handlers {
+func NewHandlers(db *sql.DB, mailer *mailer.WnessenMailer, frontendUrl string) Handlers {
 
 	// Comments
 	commentsRepository := comments.NewRepository(db)
@@ -29,7 +29,7 @@ func NewHandlers(db *sql.DB, mailer *mailer.WnessenMailer, isSandbox bool, front
 	// Users
 	usersRepository := users.NewRepository(db)
 	usersService := users.NewService(usersRepository)
-	usersHandler := users.NewHandler(usersService, mailer, isSandbox, frontendUrl)
+	usersHandler := users.NewHandler(usersService, mailer, frontendUrl)
 
 	return Handlers{
 		Posts:    postsHandler,
