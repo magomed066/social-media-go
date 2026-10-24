@@ -1,24 +1,34 @@
 package users
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"social-media-app/internal/json"
+	"social-media-app/internal/mailer"
 	usersDTO "social-media-app/internal/shared/dto/users"
 	mainErrors "social-media-app/internal/shared/errors/main"
 	usersErrors "social-media-app/internal/shared/errors/users"
+	"strconv"
+	"time"
 
+	"charm.land/log/v2"
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
-	service service
+	service     service
+	mailer      *mailer.WnessenMailer
+	frontendUrl string
 }
 
-func NewHandler(service service) Handler {
+func NewHandler(service service, mailer *mailer.WnessenMailer, frontendUrl string) Handler {
 	return Handler{
-		service: service,
+		service:     service,
+		mailer:      mailer,
+		frontendUrl: frontendUrl,
 	}
 }
 
@@ -130,7 +140,7 @@ func (h *Handler) UnFollow(w http.ResponseWriter, r *http.Request) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			payload	body		usersDTO.RegisterUserPayload	true	"User registration details"
-//	@Success		201		{object}	json.envelope{data=UserWithToken}
+//	@Success		201		{object}	json.envelope{data=User}
 //	@Failure		400		{object}	json.envelope	"Invalid registration details or duplicate email or username"
 //	@Failure		500		{object}	json.envelope
 //	@Router			/users/auth/register [post]
@@ -168,7 +178,43 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.WriteJSON(w, http.StatusCreated, user); err != nil {
+	// Send email
+	activationURL := fmt.Sprintf("%s/confirm/%s", h.frontendUrl, user.Token)
+
+	vars := struct {
+		Username      string
+		ActivationURL string
+	}{
+		Username:      user.Username,
+		ActivationURL: activationURL,
+	}
+
+	err = h.mailer.Send(
+		user.Email,
+		mailer.UserWelcomeTemplate,
+		vars,
+	)
+	if err != nil {
+		log.Error("error sending welcome email")
+
+		cleanupCtx, cancel := context.WithTimeout(
+			context.WithoutCancel(r.Context()),
+			time.Second*10,
+		)
+		defer cancel()
+
+		// rollback user creation if email fails (SAGA pattern)
+		if deleteErr := h.service.Delete(cleanupCtx, user.ID); deleteErr != nil {
+			log.Error("error deleting user",
+				"user_id", user.ID,
+				"error", deleteErr,
+			)
+		}
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := json.WriteJSON(w, http.StatusCreated, user.User); err != nil {
 		mainErrors.InternalServerError(w, r, err)
 	}
 }
@@ -181,7 +227,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			token	path	string	true	"Invitation token"
 //	@Success		204		"No Content"
-//	@Failure		400		{object}	json.envelope	"Invalid or expired invitation token"
+//	@Failure		404		{object}	json.envelope	"Invalid or expired invitation token"
 //	@Failure		500		{object}	json.envelope
 //	@Router			/users/activate/{token} [put]
 func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
@@ -200,5 +246,41 @@ func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.WriteJSON(w, http.StatusNoContent, ""); err != nil {
 		mainErrors.InternalServerError(w, r, err)
+	}
+}
+
+// Delete godoc
+//
+//	@Summary		Delete a user
+//	@Description	Deletes a user by ID.
+//	@Tags			Users
+//	@Produce		json
+//	@Param			userID	path	int	true	"User ID"
+//	@Success		204		"No Content"
+//	@Failure		404		{object}	json.envelope	"Invalid user ID or user not found"
+//	@Failure		500		{object}	json.envelope
+//	@Router			/users/delete/{userID} [delete]
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userID")
+
+	parsedUserID, err := strconv.Atoi(userID)
+	if err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	if err := h.service.Delete(r.Context(), int64(parsedUserID)); err != nil {
+		if errors.Is(err, mainErrors.ErrNotFound) {
+			mainErrors.NotFoundResponse(w, r, err)
+			return
+		}
+
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := json.WriteJSON(w, http.StatusNoContent, ""); err != nil {
+		mainErrors.InternalServerError(w, r, err)
+		return
 	}
 }

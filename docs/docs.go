@@ -47,7 +47,7 @@ const docTemplate = `{
                     "204": {
                         "description": "No Content"
                     },
-                    "400": {
+                    "404": {
                         "description": "Invalid or expired invitation token",
                         "schema": {
                             "$ref": "#/definitions/json.envelope"
@@ -98,7 +98,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/users.UserWithToken"
+                                            "$ref": "#/definitions/users.User"
                                         }
                                     }
                                 }
@@ -107,6 +107,44 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid registration details or duplicate email or username",
+                        "schema": {
+                            "$ref": "#/definitions/json.envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/json.envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/delete/{userID}": {
+            "delete": {
+                "description": "Deletes a user by ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete a user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Invalid user ID or user not found",
                         "schema": {
                             "$ref": "#/definitions/json.envelope"
                         }
@@ -342,35 +380,6 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "last_name": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "users.UserWithToken": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "is_active": {
-                    "type": "boolean"
-                },
-                "last_name": {
-                    "type": "string"
-                },
-                "token": {
                     "type": "string"
                 },
                 "username": {

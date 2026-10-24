@@ -170,6 +170,16 @@ func (r *repository) ActivateUser(ctx context.Context, token string) error {
 	})
 }
 
+func (r *repository) Delete(ctx context.Context, userID int64) error {
+	return dbUtils.WithTransaction(r.db, ctx, func(tx *sql.Tx) error {
+		if err := r.deleteInvitation(ctx, tx, userID); err != nil {
+			return err
+		}
+
+		return r.delete(ctx, tx, userID)
+	})
+}
+
 func (r *repository) createUserInvitation(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -257,6 +267,28 @@ func (r *repository) deleteInvitation(ctx context.Context, tx *sql.Tx, userID in
 
 	_, err := tx.ExecContext(ctx, query, userID)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Delete user
+func (r *repository) delete(ctx context.Context, tx *sql.Tx, userID int64) error {
+	query := `
+		DELETE FROM users
+		WHERE id = $1
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
+
+	_, err := tx.ExecContext(ctx, query, userID)
+	if err != nil {
+		if errors.Is(err, mainErrors.ErrNotFound) {
+			return mainErrors.ErrNotFound
+		}
+
 		return err
 	}
 

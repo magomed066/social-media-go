@@ -21,10 +21,18 @@ type application struct {
 }
 
 type config struct {
-	addr   string
-	db     dbConfig
-	env    string
-	apiURL string
+	addr        string
+	db          dbConfig
+	env         string
+	apiURL      string
+	mail        mailConfig
+	frontendUrl string
+}
+
+type mailConfig struct {
+	exp       time.Duration
+	fromEmail string
+	host      string
 }
 
 type dbConfig struct {
@@ -76,6 +84,8 @@ func (app *application) mount() http.Handler {
 
 		r.Route("/users", func(r chi.Router) {
 			r.Put("/activate/{token}", app.handlers.Users.ActivateUser)
+
+			r.Delete("/delete/{userID}", app.handlers.Users.Delete)
 
 			r.Route("/{userID}", func(r chi.Router) {
 				r.Use(app.handlers.Users.UserContextMiddleware)
