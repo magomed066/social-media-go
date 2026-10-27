@@ -68,6 +68,8 @@ func (app *application) mount() http.Handler {
 		))
 
 		r.Route("/posts", func(r chi.Router) {
+			r.Use(app.RequireAuth())
+
 			r.Post("/", app.handlers.Posts.Create)
 
 			r.Route("/{postID}", func(r chi.Router) {
@@ -101,6 +103,7 @@ func (app *application) mount() http.Handler {
 
 			r.Route("/auth", func(r chi.Router) {
 				r.Post("/register", app.handlers.Users.Register)
+				// r.Post("/token", app.handlers.Users.CreateToken)
 			})
 		})
 	})
