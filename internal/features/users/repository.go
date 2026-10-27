@@ -180,6 +180,39 @@ func (r *repository) Delete(ctx context.Context, userID int64) error {
 	})
 }
 
+func (r *repository) Login(ctx context.Context, payload usersDTO.LoginUserPayload) (User, error) {
+	query := `
+		SELECT id, COALESCE(first_name, ''), COALESCE(last_name, ''), email, username, password, is_active, created_at
+		FROM users
+		WHERE email = $1
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
+	defer cancel()
+
+	var user User
+
+	err := r.db.QueryRowContext(ctx, query, payload.Email).Scan(
+		&user.ID,
+		&user.Firstname,
+		&user.Lastname,
+		&user.Email,
+		&user.Username,
+		&user.Password,
+		&user.IsActive,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return User{}, mainErrors.ErrNotFound
+		}
+
+		return User{}, err
+	}
+
+	return user, nil
+}
+
 func (r *repository) createUserInvitation(
 	ctx context.Context,
 	tx *sql.Tx,

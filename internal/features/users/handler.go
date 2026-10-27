@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"social-media-app/internal/auth"
 	"social-media-app/internal/json"
 	"social-media-app/internal/mailer"
 	usersDTO "social-media-app/internal/shared/dto/users"
@@ -280,6 +281,66 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.WriteJSON(w, http.StatusNoContent, ""); err != nil {
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+}
+
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	var payload usersDTO.LoginUserPayload
+
+	if err := json.ReadJson(w, r, &payload); err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	if err := json.Validate.Struct(payload); err != nil {
+		mainErrors.BadRequestResponse(w, r, err)
+		return
+	}
+
+	user, err := h.service.Login(r.Context(), payload)
+	if err != nil {
+		if errors.Is(err, mainErrors.ErrNotFound) {
+			mainErrors.UnauthorizedErrorResponse(
+				w, r, usersErrors.ErrInvalidCredentials,
+			)
+			return
+		}
+
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(user.Password),
+		[]byte(payload.Password),
+	); err != nil {
+		mainErrors.UnauthorizedErrorResponse(
+			w, r, usersErrors.ErrInvalidCredentials,
+		)
+		return
+	}
+
+	if !user.IsActive {
+		mainErrors.ForbiddenResponse(
+			w, r, usersErrors.ErrAccountNotActivated,
+		)
+		return
+	}
+
+	token, err := auth.GenerateAuthToken(user.ID, user.Username)
+	if err != nil {
+		mainErrors.InternalServerError(w, r, err)
+		return
+	}
+
+	data := UserWithAuthToken{
+		User:        user,
+		AccessToken: token,
+	}
+
+	if err := json.WriteJSON(w, http.StatusOK, data); err != nil {
 		mainErrors.InternalServerError(w, r, err)
 		return
 	}

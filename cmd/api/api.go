@@ -33,6 +33,8 @@ type mailConfig struct {
 	exp       time.Duration
 	fromEmail string
 	host      string
+	username  string
+	password  string
 }
 
 type dbConfig struct {
@@ -67,6 +69,30 @@ func (app *application) mount() http.Handler {
 			httpSwagger.URL("doc.json"),
 		))
 
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/login", app.handlers.Users.Login)
+			r.Post("/register", app.handlers.Users.Register)
+			r.Put("/activate/{token}", app.handlers.Users.ActivateUser)
+		})
+
+		r.Route("/users", func(r chi.Router) {
+			r.Use(app.RequireAuth())
+
+			r.Delete("/delete/{userID}", app.handlers.Users.Delete)
+
+			r.Route("/{userID}", func(r chi.Router) {
+				r.Use(app.handlers.Users.UserContextMiddleware)
+
+				r.Get("/", app.handlers.Users.GetByID)
+				r.Put("/follow", app.handlers.Users.Follow)
+				r.Put("/unfollow", app.handlers.Users.UnFollow)
+			})
+
+			r.Group(func(r chi.Router) {
+				r.Get("/feed", app.handlers.Posts.GetUserFeed)
+			})
+		})
+
 		r.Route("/posts", func(r chi.Router) {
 			r.Use(app.RequireAuth())
 
@@ -84,28 +110,6 @@ func (app *application) mount() http.Handler {
 			})
 		})
 
-		r.Route("/users", func(r chi.Router) {
-			r.Put("/activate/{token}", app.handlers.Users.ActivateUser)
-
-			r.Delete("/delete/{userID}", app.handlers.Users.Delete)
-
-			r.Route("/{userID}", func(r chi.Router) {
-				r.Use(app.handlers.Users.UserContextMiddleware)
-
-				r.Get("/", app.handlers.Users.GetByID)
-				r.Put("/follow", app.handlers.Users.Follow)
-				r.Put("/unfollow", app.handlers.Users.UnFollow)
-			})
-
-			r.Group(func(r chi.Router) {
-				r.Get("/feed", app.handlers.Posts.GetUserFeed)
-			})
-
-			r.Route("/auth", func(r chi.Router) {
-				r.Post("/register", app.handlers.Users.Register)
-				// r.Post("/token", app.handlers.Users.CreateToken)
-			})
-		})
 	})
 
 	return r
