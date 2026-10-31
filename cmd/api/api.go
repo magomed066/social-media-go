@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"social-media-app/docs"
 	"social-media-app/internal/handlers"
@@ -116,7 +118,7 @@ func (app *application) mount() http.Handler {
 	return r
 }
 
-func (app *application) run(handler http.Handler) error {
+func (app *application) run(ctx context.Context, handler http.Handler) error {
 	// Docs
 	docs.SwaggerInfo.Version = version
 	docs.SwaggerInfo.Host = app.config.apiURL
@@ -130,7 +132,41 @@ func (app *application) run(handler http.Handler) error {
 		IdleTimeout:  time.Minute,
 	}
 
-	log.Infof("server has started at: %s", app.config.addr)
+	errorCh := make(chan error)
 
-	return srv.ListenAndServe()
+	go func() {
+		err := srv.ListenAndServe()
+
+		errorCh <- err
+	}()
+
+	select {
+	case err := <-errorCh:
+		return err
+
+	case <-ctx.Done():
+		ctx, cancel := context.WithTimeout(
+			context.Background(),
+			time.Second*25,
+		)
+		defer cancel()
+
+		shutdownErr := srv.Shutdown(ctx)
+		if shutdownErr != nil {
+			log.Error("graceful shutdown failed", "error", shutdownErr)
+			if err := srv.Close(); err != nil {
+				log.Error("failed to force close HTTP server", "error", err)
+			}
+		}
+
+		serverErr := <-errorCh
+		if errors.Is(serverErr, http.ErrServerClosed) {
+			serverErr = nil
+		}
+		if serverErr != nil {
+			log.Error("HTTP server failed during shutdown", "error", serverErr)
+		}
+
+		return errors.Join(shutdownErr, serverErr)
+	}
 }

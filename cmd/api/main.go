@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
+	"os/signal"
 	"social-media-app/internal/db"
 	"social-media-app/internal/env"
 	"social-media-app/internal/handlers"
 	"social-media-app/internal/mailer"
+	"syscall"
 	"time"
 
 	"charm.land/log/v2"
@@ -32,7 +35,20 @@ const version = "0.0.1"
 // @name						Authorization
 // @description				Enter Bearer <accessToken>, using the accessToken returned by POST /auth/login.
 func main() {
-	initialize()
+	err := initApp()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func initApp() error {
+	err := godotenv.Load()
+	if err != nil {
+		return err
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	cfg := config{
 		addr:   env.GetString("ADDR", ":8080"),
@@ -61,7 +77,7 @@ func main() {
 		cfg.db.maxIdleTime,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer db.Close()
 	log.Info("db connection pool established")
@@ -73,7 +89,7 @@ func main() {
 		cfg.mail.password,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	handlers := handlers.NewHandlers(db, mailer, cfg.frontendUrl)
@@ -83,14 +99,5 @@ func main() {
 		handlers: handlers,
 	}
 
-	if err := app.run(app.mount()); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func initialize() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Could not load .env file")
-	}
+	return app.run(ctx, app.mount())
 }
