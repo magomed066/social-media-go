@@ -36,15 +36,14 @@ func NewHandler(service service, mailer *mailer.WnessenMailer, frontendUrl strin
 // Get User By ID godoc
 //
 //	@Summary		Fetch a user
-//	@Description	Fetches a user by id
+//	@Description	Returns the user profile and role for the given positive user ID.
 //	@Tags			Users
-//	@Accept			json
 //	@Produce		json
 //	@Param			userID	path		int	true	"User ID"
 //	@Success		200		{object}	json.envelope{data=User}
-//	@Failure		400		{object}	json.envelope
-//	@Failure		404		{object}	json.envelope
-//	@Failure		500		{object}	json.envelope
+//	@Failure		400		{object}	json.envelope	"User ID must be a positive integer"
+//	@Failure		404		{object}	json.envelope	"User not found"
+//	@Failure		500		{object}	json.envelope	"Internal server error"
 //	@Failure		401		{object}	json.envelope	"Missing, invalid, or expired access token"
 //	@Security		ApiKeyAuth
 //	@Router			/users/{userID}/ [get]
@@ -57,16 +56,16 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 // Follow godoc
 //
 //	@Summary		Follow a user
-//	@Description	Adds the user identified by user_id in the request body as a follower of the user in the path.
+//	@Description	Adds the user identified by user_id in the request body as a follower of the user in the path. The follower ID is supplied explicitly and is not inferred from the access token.
 //	@Tags			Users
 //	@Accept			json
 //	@Produce		json
 //	@Param			userID	path	int								true	"User ID to follow"
 //	@Param			payload	body	usersDTO.FollowerUserPayload	true	"Follower's user ID"
 //	@Success		204		"No Content"
-//	@Failure		400		{object}	json.envelope
-//	@Failure		404		{object}	json.envelope
-//	@Failure		500		{object}	json.envelope
+//	@Failure		400		{object}	json.envelope	"Invalid user ID or malformed request body"
+//	@Failure		404		{object}	json.envelope	"User not found"
+//	@Failure		500		{object}	json.envelope	"Internal server error"
 //	@Failure		401		{object}	json.envelope	"Missing, invalid, or expired access token"
 //	@Security		ApiKeyAuth
 //	@Router			/users/{userID}/follow [put]
@@ -98,16 +97,16 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 // UnFollow godoc
 //
 //	@Summary		Unfollow a user
-//	@Description	Removes the user identified by user_id in the request body as a follower of the user in the path.
+//	@Description	Removes the user identified by user_id in the request body as a follower of the user in the path. The follower ID is supplied explicitly and is not inferred from the access token.
 //	@Tags			Users
 //	@Accept			json
 //	@Produce		json
 //	@Param			userID	path	int								true	"User ID to unfollow"
 //	@Param			payload	body	usersDTO.FollowerUserPayload	true	"Follower's user ID"
 //	@Success		204		"No Content"
-//	@Failure		400		{object}	json.envelope
-//	@Failure		404		{object}	json.envelope
-//	@Failure		500		{object}	json.envelope
+//	@Failure		400		{object}	json.envelope	"Invalid user ID or malformed request body"
+//	@Failure		404		{object}	json.envelope	"User not found"
+//	@Failure		500		{object}	json.envelope	"Internal server error"
 //	@Failure		401		{object}	json.envelope	"Missing, invalid, or expired access token"
 //	@Security		ApiKeyAuth
 //	@Router			/users/{userID}/unfollow [put]
@@ -139,14 +138,14 @@ func (h *Handler) UnFollow(w http.ResponseWriter, r *http.Request) {
 // Register godoc
 //
 //	@Summary		Register a user
-//	@Description	Creates an inactive user and an invitation for account activation.
+//	@Description	Creates an inactive user and emails an activation link. Activate the account before logging in. The response contains the user profile without a password or invitation token.
 //	@Tags			Auth
 //	@Accept			json
 //	@Produce		json
 //	@Param			payload	body		usersDTO.RegisterUserPayload	true	"User registration details"
 //	@Success		201		{object}	json.envelope{data=User}
 //	@Failure		400		{object}	json.envelope	"Invalid registration details or duplicate email or username"
-//	@Failure		500		{object}	json.envelope
+//	@Failure		500		{object}	json.envelope	"Internal server error"
 //	@Router			/auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var payload usersDTO.RegisterUserPayload
@@ -226,13 +225,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // ActivateUser godoc
 //
 //	@Summary		Activate a user
-//	@Description	Activates a user using an unexpired invitation token.
+//	@Description	Activates a user using the unexpired invitation token from the welcome email. The token is consumed on success and cannot be reused.
 //	@Tags			Auth
 //	@Produce		json
 //	@Param			token	path	string	true	"Invitation token"
 //	@Success		204		"No Content"
 //	@Failure		404		{object}	json.envelope	"Invalid or expired invitation token"
-//	@Failure		500		{object}	json.envelope
+//	@Failure		500		{object}	json.envelope	"Internal server error"
 //	@Router			/auth/activate/{token} [put]
 func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
@@ -256,15 +255,14 @@ func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 // Delete godoc
 //
 //	@Summary		Delete a user
-//	@Description	Deletes a user by ID.
+//	@Description	Deletes a user and their invitations by ID. Returns no content even if the user does not exist.
 //	@Tags			Users
 //	@Produce		json
 //	@Param			userID	path	int	true	"User ID"
 //	@Success		204		"No Content"
 //	@Failure		400		{object}	json.envelope	"Invalid user ID"
 //	@Failure		401		{object}	json.envelope	"Missing, invalid, or expired access token"
-//	@Failure		404		{object}	json.envelope	"User not found"
-//	@Failure		500		{object}	json.envelope
+//	@Failure		500		{object}	json.envelope	"Internal server error"
 //	@Security		ApiKeyAuth
 //	@Router			/users/delete/{userID} [delete]
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -304,7 +302,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 //	@Failure		400		{object}	json.envelope	"Invalid request body or missing credentials"
 //	@Failure		401		{object}	json.envelope	"Invalid email or password"
 //	@Failure		403		{object}	json.envelope	"Account is not activated"
-//	@Failure		500		{object}	json.envelope
+//	@Failure		500		{object}	json.envelope	"Internal server error"
 //	@Router			/auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var payload usersDTO.LoginUserPayload

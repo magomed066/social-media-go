@@ -30,7 +30,7 @@ const version = "0.0.1"
 // @securityDefinitions.apikey	ApiKeyAuth
 // @in							header
 // @name						Authorization
-// @description
+// @description				Enter Bearer <accessToken>, using the accessToken returned by POST /auth/login.
 func main() {
 	initialize()
 
