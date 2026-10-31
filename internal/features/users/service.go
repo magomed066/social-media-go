@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"social-media-app/internal/features/roles"
 	"social-media-app/internal/shared/consts"
 	usersDTO "social-media-app/internal/shared/dto/users"
 
@@ -50,6 +51,9 @@ func (s *service) Register(ctx context.Context, payload usersDTO.RegisterUserPay
 		Email:     payload.Email,
 		Username:  payload.Username,
 		Password:  string(hash),
+		Role: roles.Role{
+			Name: "user",
+		},
 	}
 
 	plainToken := uuid.New().String()
@@ -75,4 +79,8 @@ func (s *service) ActivateUser(ctx context.Context, token string) error {
 
 func (s *service) Delete(ctx context.Context, userID int64) error {
 	return s.repository.Delete(ctx, userID)
+}
+
+func (s *service) Login(ctx context.Context, payload usersDTO.LoginUserPayload) (User, error) {
+	return s.repository.Login(ctx, payload)
 }

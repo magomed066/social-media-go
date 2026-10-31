@@ -22,13 +22,13 @@ type WnessenMailer struct {
 
 func NewWnessenMailer(host, from, username, password string) (*WnessenMailer, error) {
 	client, err := mail.NewClient(
-		host,
+		"smtp.yandex.ru",
 		mail.WithPort(465),
 		mail.WithSSL(),
 		mail.WithSMTPAuth(mail.SMTPAuthPlain),
 		mail.WithUsername(username),
 		mail.WithPassword(password),
-		mail.WithTimeout(5*time.Second),
+		mail.WithTimeout(20*time.Second),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create SMTP client: %w", err)

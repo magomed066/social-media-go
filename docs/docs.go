@@ -24,14 +24,14 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/users/activate/{token}": {
+        "/auth/activate/{token}": {
             "put": {
-                "description": "Activates a user using an unexpired invitation token.",
+                "description": "Activates a user using the unexpired invitation token from the welcome email. The token is consumed on success and cannot be reused.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "Auth"
                 ],
                 "summary": "Activate a user",
                 "parameters": [
@@ -50,21 +50,21 @@ const docTemplate = `{
                     "404": {
                         "description": "Invalid or expired invitation token",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
             }
         },
-        "/users/auth/register": {
+        "/auth/login": {
             "post": {
-                "description": "Creates an inactive user and an invitation for account activation.",
+                "description": "Authenticates an activated account and returns the user and a JWT access token. Use Bearer \u003caccessToken\u003e in the Authorization header for protected endpoints.",
                 "consumes": [
                     "application/json"
                 ],
@@ -72,7 +72,77 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "Auth"
+                ],
+                "summary": "Log in",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/LoginUserPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/UserWithAuthToken"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body or missing credentials",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid email or password",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Account is not activated",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Creates an inactive user and emails an activation link. Activate the account before logging in. The response contains the user profile without a password or invitation token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
                 ],
                 "summary": "Register a user",
                 "parameters": [
@@ -82,7 +152,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersDTO.RegisterUserPayload"
+                            "$ref": "#/definitions/RegisterUserPayload"
                         }
                     }
                 ],
@@ -92,13 +162,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/json.envelope"
+                                    "$ref": "#/definitions/Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/users.User"
+                                            "$ref": "#/definitions/User"
                                         }
                                     }
                                 }
@@ -108,13 +178,452 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid registration details or duplicate email or username",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Creates a post with a title, content, and optional tags. The current implementation assigns user ID 3 as the author instead of the authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Posts"
+                ],
+                "summary": "Create a post",
+                "parameters": [
+                    {
+                        "description": "Post details",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/postsDTO.CreatePostPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/posts.Post"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body or post details",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{postID}/": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a post by ID, including its comments.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Posts"
+                ],
+                "summary": "Fetch a post",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Post ID",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/posts.Post"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid post ID",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Deletes a post by ID. Requires ownership of the post or a role with at least administrator privileges.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Posts"
+                ],
+                "summary": "Delete a post",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Post ID",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Invalid post ID",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient permissions to modify this post",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates the supplied title and content fields. Omitted or null fields remain unchanged. Requires ownership of the post or a role with at least moderator privileges.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Posts"
+                ],
+                "summary": "Update a post",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Post ID",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Post details",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/postsDTO.UpdatePostPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/posts.Post"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid post ID or request body",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient permissions to modify this post",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{postID}/comments": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns the comments for the specified post, including author details.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "List comments for a post",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Post ID",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/comments.Comment"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Post ID must be a positive integer",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Creates a comment on the specified post. The current implementation assigns user ID 55 as the author instead of the authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Create a comment",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Post ID",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Comment details",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/commentsDTO.CreateCommentPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/comments.Comment"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid post ID, request body, or comment content",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -122,7 +631,12 @@ const docTemplate = `{
         },
         "/users/delete/{userID}": {
             "delete": {
-                "description": "Deletes a user by ID.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Deletes a user and their invitations by ID. Returns no content even if the user does not exist.",
                 "produces": [
                     "application/json"
                 ],
@@ -143,16 +657,139 @@ const docTemplate = `{
                     "204": {
                         "description": "No Content"
                     },
-                    "404": {
-                        "description": "Invalid user ID or user not found",
+                    "400": {
+                        "description": "Invalid user ID",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/feed": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns posts with author details and comment counts, filtered and ordered by creation time. The current implementation uses user ID 3 instead of the authenticated user's ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get the user feed",
+                "parameters": [
+                    {
+                        "maximum": 20,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Number of posts to return",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "Number of posts to skip",
+                        "name": "offset",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Creation time sort order",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Up to 5 comma-separated tags; posts must contain all supplied tags",
+                        "name": "tags",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 10,
+                        "type": "string",
+                        "description": "Case-insensitive text search in title or content (maximum 10 characters)",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Inclusive creation time, formatted as YYYY-MM-DD HH:MM:SS",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exclusive creation time, formatted as YYYY-MM-DD HH:MM:SS; only parsed when from is supplied",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/posts.PostWithMetaData"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid pagination or filter parameters",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -165,10 +802,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Fetches a user by id",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Returns the user profile and role for the given positive user ID.",
                 "produces": [
                     "application/json"
                 ],
@@ -191,13 +825,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/json.envelope"
+                                    "$ref": "#/definitions/Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/users.User"
+                                            "$ref": "#/definitions/User"
                                         }
                                     }
                                 }
@@ -205,21 +839,27 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "User ID must be a positive integer",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -232,7 +872,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Adds the user identified by user_id in the request body as a follower of the user in the path.",
+                "description": "Adds the user identified by user_id in the request body as a follower of the user in the path. The follower ID is supplied explicitly and is not inferred from the access token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -257,7 +897,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersDTO.FollowerUserPayload"
+                            "$ref": "#/definitions/FollowerUserPayload"
                         }
                     }
                 ],
@@ -266,21 +906,27 @@ const docTemplate = `{
                         "description": "No Content"
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid user ID or malformed request body",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -293,7 +939,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Removes the user identified by user_id in the request body as a follower of the user in the path.",
+                "description": "Removes the user identified by user_id in the request body as a follower of the user in the path. The follower ID is supplied explicitly and is not inferred from the access token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -318,7 +964,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersDTO.FollowerUserPayload"
+                            "$ref": "#/definitions/FollowerUserPayload"
                         }
                     }
                 ],
@@ -327,21 +973,27 @@ const docTemplate = `{
                         "description": "No Content"
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid user ID or malformed request body",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -349,7 +1001,72 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "json.envelope": {
+        "FollowerUserPayload": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "description": "ID of the follower, supplied explicitly rather than taken from the access token.",
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "LoginUserPayload": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "jane@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "example-password"
+                }
+            }
+        },
+        "RegisterUserPayload": {
+            "type": "object",
+            "required": [
+                "email",
+                "first_name",
+                "last_name",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "jane@example.com"
+                },
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Jane"
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Doe"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 3,
+                    "example": "example-password"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "jane_doe"
+                }
+            }
+        },
+        "Response": {
             "type": "object",
             "properties": {
                 "data": {},
@@ -361,75 +1078,246 @@ const docTemplate = `{
                 }
             }
         },
-        "users.User": {
+        "User": {
             "type": "object",
             "properties": {
-                "created_at": {
+                "createdAt": {
                     "type": "string"
                 },
                 "email": {
                     "type": "string"
                 },
-                "first_name": {
+                "firstName": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
                 },
-                "is_active": {
+                "isActive": {
                     "type": "boolean"
                 },
-                "last_name": {
+                "lastName": {
                     "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/roles.Role"
+                },
+                "roleID": {
+                    "type": "integer"
                 },
                 "username": {
                     "type": "string"
                 }
             }
         },
-        "usersDTO.FollowerUserPayload": {
+        "UserWithAuthToken": {
             "type": "object",
             "properties": {
+                "accessToken": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/User"
+                }
+            }
+        },
+        "comments.Comment": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "post_id": {
+                    "type": "integer"
+                },
+                "user": {
+                    "$ref": "#/definitions/users.Author"
+                },
                 "user_id": {
                     "type": "integer"
                 }
             }
         },
-        "usersDTO.RegisterUserPayload": {
+        "commentsDTO.CreateCommentPayload": {
             "type": "object",
             "required": [
-                "email",
-                "first_name",
-                "last_name",
-                "password",
-                "username"
+                "content"
             ],
             "properties": {
-                "email": {
+                "content": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "example": "Thanks for sharing this post!"
+                }
+            }
+        },
+        "posts.Post": {
+            "type": "object",
+            "properties": {
+                "comments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/comments.Comment"
+                    }
+                },
+                "content": {
                     "type": "string"
                 },
-                "first_name": {
-                    "type": "string",
-                    "maxLength": 100
+                "created_at": {
+                    "type": "string"
                 },
-                "last_name": {
-                    "type": "string",
-                    "maxLength": 255
+                "id": {
+                    "type": "integer"
                 },
-                "password": {
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/users.Author"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "posts.PostWithMetaData": {
+            "type": "object",
+            "properties": {
+                "comments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/comments.Comment"
+                    }
+                },
+                "comments_count": {
+                    "type": "integer"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/users.Author"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "postsDTO.CreatePostPayload": {
+            "type": "object",
+            "required": [
+                "content",
+                "title"
+            ],
+            "properties": {
+                "content": {
                     "type": "string",
-                    "maxLength": 72,
-                    "minLength": 3
+                    "maxLength": 1000,
+                    "example": "Sharing what I learned today."
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "go",
+                        "learning"
+                    ]
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "example": "My first post"
+                }
+            }
+        },
+        "postsDTO.UpdatePostPayload": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Updated post content."
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "example": "Updated title"
+                }
+            }
+        },
+        "roles.Role": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "users.Author": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
                 },
                 "username": {
-                    "type": "string",
-                    "maxLength": 50
+                    "type": "string"
                 }
             }
         }
     },
     "securityDefinitions": {
         "ApiKeyAuth": {
+            "description": "Enter Bearer \u003caccessToken\u003e, using the accessToken returned by POST /auth/login.",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

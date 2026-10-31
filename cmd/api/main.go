@@ -30,7 +30,7 @@ const version = "0.0.1"
 // @securityDefinitions.apikey	ApiKeyAuth
 // @in							header
 // @name						Authorization
-// @description
+// @description				Enter Bearer <accessToken>, using the accessToken returned by POST /auth/login.
 func main() {
 	initialize()
 
@@ -48,6 +48,8 @@ func main() {
 			host:      env.GetString("MAIL_HOST", ""),
 			exp:       time.Hour * 24 * 3, // 3 days
 			fromEmail: env.GetString("FROM_EMAIL", ""),
+			username:  env.GetString("SMTP_USERNAME", ""),
+			password:  env.GetString("SMTP_PASSWORD", ""),
 		},
 		frontendUrl: env.GetString("FRONTEND_URL", "localhost:5173"),
 	}
@@ -67,8 +69,8 @@ func main() {
 	mailer, err := mailer.NewWnessenMailer(
 		cfg.mail.host,
 		cfg.mail.fromEmail,
-		env.GetString("SMTP_USERNAME", ""),
-		env.GetString("SMTP_PASSWORD", ""),
+		cfg.mail.username,
+		cfg.mail.password,
 	)
 	if err != nil {
 		log.Fatal(err)

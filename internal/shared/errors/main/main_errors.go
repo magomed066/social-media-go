@@ -27,3 +27,16 @@ func NotFoundResponse(w http.ResponseWriter, r *http.Request, err error) {
 
 	json.WriteJSONError(w, http.StatusNotFound, "record not found")
 }
+
+func UnauthorizedErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
+	log.Errorf("unauthorized error %s, path: %s, error: %s", r.Method, r.URL.Path, err)
+
+	json.WriteJSONError(w, http.StatusUnauthorized, "unauthorized")
+}
+
+func ForbiddenResponse(w http.ResponseWriter, r *http.Request, err error) {
+	log.Errorf("forbidden error %s, path: %s, error: %s",
+		r.Method, r.URL.Path, err)
+
+	json.WriteJSONError(w, http.StatusForbidden, "forbidden")
+}

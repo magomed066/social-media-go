@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"social-media-app/docs"
 	"social-media-app/internal/handlers"
+	"social-media-app/internal/shared/consts"
 	"time"
 
 	"charm.land/log/v2"
@@ -33,6 +34,8 @@ type mailConfig struct {
 	exp       time.Duration
 	fromEmail string
 	host      string
+	username  string
+	password  string
 }
 
 type dbConfig struct {
@@ -67,23 +70,14 @@ func (app *application) mount() http.Handler {
 			httpSwagger.URL("doc.json"),
 		))
 
-		r.Route("/posts", func(r chi.Router) {
-			r.Post("/", app.handlers.Posts.Create)
-
-			r.Route("/{postID}", func(r chi.Router) {
-				r.Use(app.handlers.Posts.PostContextMiddleware)
-
-				r.Get("/", app.handlers.Posts.GetByID)
-				r.Patch("/", app.handlers.Posts.Update)
-				r.Delete("/", app.handlers.Posts.Delete)
-
-				r.Get("/comments", app.handlers.Comments.GetByPostID)
-				r.Post("/comments", app.handlers.Comments.Create)
-			})
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/login", app.handlers.Users.Login)
+			r.Post("/register", app.handlers.Users.Register)
+			r.Put("/activate/{token}", app.handlers.Users.ActivateUser)
 		})
 
 		r.Route("/users", func(r chi.Router) {
-			r.Put("/activate/{token}", app.handlers.Users.ActivateUser)
+			r.Use(app.RequireAuth())
 
 			r.Delete("/delete/{userID}", app.handlers.Users.Delete)
 
@@ -98,11 +92,25 @@ func (app *application) mount() http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Get("/feed", app.handlers.Posts.GetUserFeed)
 			})
+		})
 
-			r.Route("/auth", func(r chi.Router) {
-				r.Post("/register", app.handlers.Users.Register)
+		r.Route("/posts", func(r chi.Router) {
+			r.Use(app.RequireAuth())
+
+			r.Post("/", app.handlers.Posts.Create)
+
+			r.Route("/{postID}", func(r chi.Router) {
+				r.Use(app.handlers.Posts.PostContextMiddleware)
+
+				r.Get("/", app.handlers.Posts.GetByID)
+				r.Patch("/", app.checkPostOwnership(consts.MODERATOR_ROLE, app.handlers.Posts.Update))
+				r.Delete("/", app.checkPostOwnership(consts.ADMIN_ROLE, app.handlers.Posts.Delete))
+
+				r.Get("/comments", app.handlers.Comments.GetByPostID)
+				r.Post("/comments", app.handlers.Comments.Create)
 			})
 		})
+
 	})
 
 	return r
