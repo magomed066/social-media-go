@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"social-media-app/docs"
 	"social-media-app/internal/handlers"
+	"social-media-app/internal/ratelimiter"
 	"social-media-app/internal/shared/consts"
 	"time"
 
 	"charm.land/log/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 
 	// httpSwagger "github.com/swaggo/http-swagger"
 	// _ "github.com/swaggo/http-swagger/example/go-chi/docs"
@@ -24,12 +26,13 @@ type application struct {
 }
 
 type config struct {
-	addr        string
-	db          dbConfig
-	env         string
-	apiURL      string
-	mail        mailConfig
-	frontendUrl string
+	addr          string
+	db            dbConfig
+	env           string
+	apiURL        string
+	mail          mailConfig
+	frontendUrl   string
+	ipRateLimiter *ratelimiter.IPRateLimiter
 }
 
 type mailConfig struct {
@@ -50,11 +53,23 @@ type dbConfig struct {
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 
+	r.Use(cors.Handler(cors.Options{
+		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
+		AllowedOrigins: []string{"https://*", "http://*", "http://localhost:5173"},
+		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "Access-Control-Allow-Origin"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	}))
+
 	// A good base middleware stack
 	r.Use(middleware.RequestID)
 	r.Use(middleware.ClientIPFromRemoteAddr) // pick one ClientIPFrom* based on your infra, see below
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(app.RateLimitMiddleware(app.config.ipRateLimiter))
 
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
