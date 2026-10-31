@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"social-media-app/docs"
 	"social-media-app/internal/handlers"
+	"social-media-app/internal/shared/consts"
 	"time"
 
 	"charm.land/log/v2"
@@ -102,8 +103,8 @@ func (app *application) mount() http.Handler {
 				r.Use(app.handlers.Posts.PostContextMiddleware)
 
 				r.Get("/", app.handlers.Posts.GetByID)
-				r.Patch("/", app.handlers.Posts.Update)
-				r.Delete("/", app.handlers.Posts.Delete)
+				r.Patch("/", app.checkPostOwnership(consts.MODERATOR_ROLE, app.handlers.Posts.Update))
+				r.Delete("/", app.checkPostOwnership(consts.ADMIN_ROLE, app.handlers.Posts.Delete))
 
 				r.Get("/comments", app.handlers.Comments.GetByPostID)
 				r.Post("/comments", app.handlers.Comments.Create)

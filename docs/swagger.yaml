@@ -61,6 +61,10 @@ definitions:
         type: boolean
       lastName:
         type: string
+      role:
+        $ref: '#/definitions/roles.Role'
+      roleID:
+        type: integer
       username:
         type: string
     type: object
@@ -70,6 +74,17 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/User'
+    type: object
+  roles.Role:
+    properties:
+      ID:
+        type: integer
+      description:
+        type: string
+      level:
+        type: integer
+      name:
+        type: string
     type: object
 info:
   contact:

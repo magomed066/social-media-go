@@ -38,5 +38,5 @@ func ForbiddenResponse(w http.ResponseWriter, r *http.Request, err error) {
 	log.Errorf("forbidden error %s, path: %s, error: %s",
 		r.Method, r.URL.Path, err)
 
-	json.WriteJSONError(w, http.StatusForbidden, err.Error())
+	json.WriteJSONError(w, http.StatusForbidden, "forbidden")
 }

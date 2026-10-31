@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"social-media-app/internal/features/comments"
 	"social-media-app/internal/features/posts"
+	"social-media-app/internal/features/roles"
 	"social-media-app/internal/features/users"
 	"time"
 
@@ -107,6 +108,9 @@ func generateUsers(num int) []*users.User {
 			Lastname:  lastNames[(i/len(firstNames))%len(lastNames)],
 			Username:  fmt.Sprintf("seed_user_%03d", i+1),
 			Email:     fmt.Sprintf("seed_user_%03d@example.com", i+1),
+			Role: roles.Role{
+				Name: "user",
+			},
 		}
 	}
 

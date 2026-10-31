@@ -26,12 +26,17 @@ func NewRepository(db *sql.DB) repository {
 
 func (r *repository) Create(ctx context.Context, tx *sql.Tx, user *User) error {
 	query := `
-		INSERT INTO users (first_name, last_name, password, email, username)
-		VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at
+		INSERT INTO users (first_name, last_name, password, email, username, role_id)
+		VALUES ($1, $2, $3, $4, $5, (SELECT id from roles WHERE name = $6)) RETURNING id, created_at
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, consts.QueryTimeoutDuration)
 	defer cancel()
+
+	role := user.Role.Name
+	if role == "" {
+		role = "user"
+	}
 
 	err := tx.QueryRowContext(
 		ctx,
@@ -41,6 +46,7 @@ func (r *repository) Create(ctx context.Context, tx *sql.Tx, user *User) error {
 		user.Password,
 		user.Email,
 		user.Username,
+		role,
 	).Scan(
 		&user.ID,
 		&user.CreatedAt,
@@ -62,8 +68,9 @@ func (r *repository) Create(ctx context.Context, tx *sql.Tx, user *User) error {
 
 func (r *repository) GetByID(ctx context.Context, userID int64) (User, error) {
 	query := `
-		SELECT id, COALESCE(first_name, ''), COALESCE(last_name, ''), email, username, created_at
+		SELECT users.id, COALESCE(first_name, ''), COALESCE(last_name, ''), email, username, created_at, roles.*
 		FROM users
+		JOIN roles ON (users.role_id = roles.id)
 		WHERE id = $1
 	`
 
@@ -79,6 +86,10 @@ func (r *repository) GetByID(ctx context.Context, userID int64) (User, error) {
 		&user.Email,
 		&user.Username,
 		&user.CreatedAt,
+		&user.Role.ID,
+		&user.Role.Name,
+		&user.Role.Level,
+		&user.Role.Description,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

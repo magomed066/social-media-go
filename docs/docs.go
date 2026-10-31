@@ -542,6 +542,12 @@ const docTemplate = `{
                 "lastName": {
                     "type": "string"
                 },
+                "role": {
+                    "$ref": "#/definitions/roles.Role"
+                },
+                "roleID": {
+                    "type": "integer"
+                },
                 "username": {
                     "type": "string"
                 }
@@ -555,6 +561,23 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/User"
+                }
+            }
+        },
+        "roles.Role": {
+            "type": "object",
+            "properties": {
+                "ID": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         }
