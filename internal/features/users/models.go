@@ -9,7 +9,7 @@ type User struct {
 	Password  string `json:"-"`
 	CreatedAt string `json:"createdAt"`
 	IsActive  bool   `json:"isActive"`
-}
+} //	@name	User
 
 type Author struct {
 	ID       int64  `json:"id"`
@@ -24,4 +24,4 @@ type UserWithToken struct {
 type UserWithAuthToken struct {
 	User        User   `json:"user"`
 	AccessToken string `json:"accessToken"`
-}
+} //	@name	UserWithAuthToken

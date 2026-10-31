@@ -11,7 +11,7 @@ type envelope struct {
 	Success bool   `json:"success"`
 	Data    any    `json:"data"`
 	Error   string `json:"error"`
-}
+} //	@name	Response
 
 var Validate = validator.New(validator.WithRequiredStructEnabled())
 

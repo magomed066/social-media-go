@@ -45,6 +45,7 @@ func NewHandler(service service, mailer *mailer.WnessenMailer, frontendUrl strin
 //	@Failure		400		{object}	json.envelope
 //	@Failure		404		{object}	json.envelope
 //	@Failure		500		{object}	json.envelope
+//	@Failure		401		{object}	json.envelope	"Missing, invalid, or expired access token"
 //	@Security		ApiKeyAuth
 //	@Router			/users/{userID}/ [get]
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -66,6 +67,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 //	@Failure		400		{object}	json.envelope
 //	@Failure		404		{object}	json.envelope
 //	@Failure		500		{object}	json.envelope
+//	@Failure		401		{object}	json.envelope	"Missing, invalid, or expired access token"
 //	@Security		ApiKeyAuth
 //	@Router			/users/{userID}/follow [put]
 func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +108,7 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 //	@Failure		400		{object}	json.envelope
 //	@Failure		404		{object}	json.envelope
 //	@Failure		500		{object}	json.envelope
+//	@Failure		401		{object}	json.envelope	"Missing, invalid, or expired access token"
 //	@Security		ApiKeyAuth
 //	@Router			/users/{userID}/unfollow [put]
 func (h *Handler) UnFollow(w http.ResponseWriter, r *http.Request) {
@@ -137,14 +140,14 @@ func (h *Handler) UnFollow(w http.ResponseWriter, r *http.Request) {
 //
 //	@Summary		Register a user
 //	@Description	Creates an inactive user and an invitation for account activation.
-//	@Tags			Users
+//	@Tags			Auth
 //	@Accept			json
 //	@Produce		json
 //	@Param			payload	body		usersDTO.RegisterUserPayload	true	"User registration details"
 //	@Success		201		{object}	json.envelope{data=User}
 //	@Failure		400		{object}	json.envelope	"Invalid registration details or duplicate email or username"
 //	@Failure		500		{object}	json.envelope
-//	@Router			/users/auth/register [post]
+//	@Router			/auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var payload usersDTO.RegisterUserPayload
 
@@ -224,13 +227,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 //
 //	@Summary		Activate a user
 //	@Description	Activates a user using an unexpired invitation token.
-//	@Tags			Users
+//	@Tags			Auth
 //	@Produce		json
 //	@Param			token	path	string	true	"Invitation token"
 //	@Success		204		"No Content"
 //	@Failure		404		{object}	json.envelope	"Invalid or expired invitation token"
 //	@Failure		500		{object}	json.envelope
-//	@Router			/users/activate/{token} [put]
+//	@Router			/auth/activate/{token} [put]
 func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 
@@ -258,8 +261,11 @@ func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			userID	path	int	true	"User ID"
 //	@Success		204		"No Content"
-//	@Failure		404		{object}	json.envelope	"Invalid user ID or user not found"
+//	@Failure		400		{object}	json.envelope	"Invalid user ID"
+//	@Failure		401		{object}	json.envelope	"Missing, invalid, or expired access token"
+//	@Failure		404		{object}	json.envelope	"User not found"
 //	@Failure		500		{object}	json.envelope
+//	@Security		ApiKeyAuth
 //	@Router			/users/delete/{userID} [delete]
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userID")
@@ -286,6 +292,20 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Login godoc
+//
+//	@Summary		Log in
+//	@Description	Authenticates an activated account and returns the user and a JWT access token. Use Bearer <accessToken> in the Authorization header for protected endpoints.
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		usersDTO.LoginUserPayload	true	"Login credentials"
+//	@Success		200		{object}	json.envelope{data=UserWithAuthToken}
+//	@Failure		400		{object}	json.envelope	"Invalid request body or missing credentials"
+//	@Failure		401		{object}	json.envelope	"Invalid email or password"
+//	@Failure		403		{object}	json.envelope	"Account is not activated"
+//	@Failure		500		{object}	json.envelope
+//	@Router			/auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var payload usersDTO.LoginUserPayload
 

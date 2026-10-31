@@ -2,7 +2,7 @@ package usersDTO
 
 type FollowerUserPayload struct {
 	UserID int64 `json:"user_id"`
-}
+} //	@name	FollowerUserPayload
 
 type FollowPayload struct {
 	// User that is being followed
@@ -16,9 +16,9 @@ type RegisterUserPayload struct {
 	Lastname  string `json:"last_name" validate:"required,max=255"`
 	Email     string `json:"email" validate:"email,required"`
 	Password  string `json:"password" validate:"required,min=3,max=72"`
-}
+} //	@name	RegisterUserPayload
 
 type LoginUserPayload struct {
 	Email    string `json:"email" validate:"required"`
 	Password string `json:"password" validate:"required"`
-}
+} //	@name	LoginUserPayload

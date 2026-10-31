@@ -24,14 +24,14 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/users/activate/{token}": {
+        "/auth/activate/{token}": {
             "put": {
                 "description": "Activates a user using an unexpired invitation token.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "Auth"
                 ],
                 "summary": "Activate a user",
                 "parameters": [
@@ -50,19 +50,89 @@ const docTemplate = `{
                     "404": {
                         "description": "Invalid or expired invitation token",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
             }
         },
-        "/users/auth/register": {
+        "/auth/login": {
+            "post": {
+                "description": "Authenticates an activated account and returns the user and a JWT access token. Use Bearer \u003caccessToken\u003e in the Authorization header for protected endpoints.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Log in",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/LoginUserPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/UserWithAuthToken"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body or missing credentials",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid email or password",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Account is not activated",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
             "post": {
                 "description": "Creates an inactive user and an invitation for account activation.",
                 "consumes": [
@@ -72,7 +142,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Users"
+                    "Auth"
                 ],
                 "summary": "Register a user",
                 "parameters": [
@@ -82,7 +152,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersDTO.RegisterUserPayload"
+                            "$ref": "#/definitions/RegisterUserPayload"
                         }
                     }
                 ],
@@ -92,13 +162,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/json.envelope"
+                                    "$ref": "#/definitions/Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/users.User"
+                                            "$ref": "#/definitions/User"
                                         }
                                     }
                                 }
@@ -108,13 +178,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid registration details or duplicate email or username",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -122,6 +192,11 @@ const docTemplate = `{
         },
         "/users/delete/{userID}": {
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Deletes a user by ID.",
                 "produces": [
                     "application/json"
@@ -143,16 +218,28 @@ const docTemplate = `{
                     "204": {
                         "description": "No Content"
                     },
-                    "404": {
-                        "description": "Invalid user ID or user not found",
+                    "400": {
+                        "description": "Invalid user ID",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -191,13 +278,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/json.envelope"
+                                    "$ref": "#/definitions/Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/users.User"
+                                            "$ref": "#/definitions/User"
                                         }
                                     }
                                 }
@@ -207,19 +294,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -257,7 +350,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersDTO.FollowerUserPayload"
+                            "$ref": "#/definitions/FollowerUserPayload"
                         }
                     }
                 ],
@@ -268,19 +361,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -318,7 +417,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usersDTO.FollowerUserPayload"
+                            "$ref": "#/definitions/FollowerUserPayload"
                         }
                     }
                 ],
@@ -329,19 +428,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or expired access token",
+                        "schema": {
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/json.envelope"
+                            "$ref": "#/definitions/Response"
                         }
                     }
                 }
@@ -349,45 +454,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "json.envelope": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "error": {
-                    "type": "string"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "users.User": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "firstName": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "isActive": {
-                    "type": "boolean"
-                },
-                "lastName": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "usersDTO.FollowerUserPayload": {
+        "FollowerUserPayload": {
             "type": "object",
             "properties": {
                 "user_id": {
@@ -395,7 +462,22 @@ const docTemplate = `{
                 }
             }
         },
-        "usersDTO.RegisterUserPayload": {
+        "LoginUserPayload": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "RegisterUserPayload": {
             "type": "object",
             "required": [
                 "email",
@@ -424,6 +506,55 @@ const docTemplate = `{
                 "username": {
                     "type": "string",
                     "maxLength": 50
+                }
+            }
+        },
+        "Response": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "User": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "UserWithAuthToken": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/User"
                 }
             }
         }
