@@ -7,6 +7,7 @@ import (
 	"social-media-app/internal/env"
 	"social-media-app/internal/handlers"
 	"social-media-app/internal/mailer"
+	"social-media-app/internal/ratelimiter"
 	"syscall"
 	"time"
 
@@ -67,7 +68,8 @@ func initApp() error {
 			username:  env.GetString("SMTP_USERNAME", ""),
 			password:  env.GetString("SMTP_PASSWORD", ""),
 		},
-		frontendUrl: env.GetString("FRONTEND_URL", "localhost:5173"),
+		frontendUrl:   env.GetString("FRONTEND_URL", "localhost:5173"),
+		ipRateLimiter: ratelimiter.NewIPRateLimiter(),
 	}
 
 	db, err := db.New(

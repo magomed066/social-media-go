@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"social-media-app/docs"
 	"social-media-app/internal/handlers"
+	"social-media-app/internal/ratelimiter"
 	"social-media-app/internal/shared/consts"
 	"time"
 
@@ -24,12 +25,13 @@ type application struct {
 }
 
 type config struct {
-	addr        string
-	db          dbConfig
-	env         string
-	apiURL      string
-	mail        mailConfig
-	frontendUrl string
+	addr          string
+	db            dbConfig
+	env           string
+	apiURL        string
+	mail          mailConfig
+	frontendUrl   string
+	ipRateLimiter *ratelimiter.IPRateLimiter
 }
 
 type mailConfig struct {
@@ -55,6 +57,7 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.ClientIPFromRemoteAddr) // pick one ClientIPFrom* based on your infra, see below
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(app.RateLimitMiddleware(app.config.ipRateLimiter))
 
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further

@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"social-media-app/internal/auth"
 	"social-media-app/internal/features/posts"
 	"social-media-app/internal/features/users"
+	"social-media-app/internal/ratelimiter"
 	mainErrors "social-media-app/internal/shared/errors/main"
 	"strings"
 )
@@ -79,4 +81,25 @@ func (app *application) checkRole(ctx context.Context, user *users.User, roleNam
 
 	return user.Role.Level >= role.Level, nil
 
+}
+
+func (app *application) RateLimitMiddleware(
+	ipRateLimiter *ratelimiter.IPRateLimiter,
+) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				http.Error(w, "Invalid IP", http.StatusInternalServerError)
+				return
+			}
+
+			if !ipRateLimiter.GetLimiter(ip).Allow() {
+				http.Error(w, "Rate Limit Exceeded", http.StatusTooManyRequests)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }
